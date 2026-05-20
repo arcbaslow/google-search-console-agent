@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "google-search-console-agent",
+  "owner": {
+    "name": "arcbaslow"
+  },
+  "metadata": {
+    "description": "GSC toolkit: search analytics, sitemap CRUD, URL inspection, Core Web Vitals via CrUX, per-URL PageSpeed Insights, markdown audits."
+  },
+  "plugins": [
+    {
+      "name": "google-search-console-agent",
+      "source": "./",
+      "description": "Specialist agents and skills covering search analytics (queries / pages / countries / devices), CTR-curve checks, sitemap CRUD, URL inspection, Core Web Vitals (CrUX + PSI), and markdown audit reports."
+    }
+  ]
+}

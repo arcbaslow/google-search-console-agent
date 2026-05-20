@@ -1,0 +1,21 @@
+{
+  "name": "google-search-console-agent",
+  "version": "0.1.0",
+  "description": "Multi-agent Google Search Console toolkit. Search analytics queries / pages / countries / devices, CTR-by-position curve checks, sitemap CRUD, URL inspection, origin-level Core Web Vitals via CrUX, per-URL PageSpeed Insights, markdown audits with bench-calibrated verdicts.",
+  "author": {
+    "name": "arcbaslow"
+  },
+  "license": "MIT",
+  "keywords": [
+    "gsc",
+    "search-console",
+    "seo",
+    "core-web-vitals",
+    "crux",
+    "pagespeed-insights",
+    "lighthouse",
+    "sitemap",
+    "url-inspection",
+    "organic-search"
+  ]
+}
