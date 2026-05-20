@@ -1,6 +1,6 @@
 [project]
 name = "google-search-console-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Multi-agent toolkit for Google Search Console, Core Web Vitals, and on-page diagnostics. Works with Claude Code, Codex, and Gemini CLI."
 readme = "README.md"
 requires-python = ">=3.10"

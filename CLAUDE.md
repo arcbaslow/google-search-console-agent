@@ -11,7 +11,8 @@ exposes `/gsc <command>` and routes to:
 
 - read skills: `gsc-audit`, `gsc-search-analytics`, `gsc-ctr-curve`,
   `gsc-url-inspect`, `gsc-core-web-vitals`, `gsc-pagespeed`,
-  `gsc-sitemaps`
+  `gsc-sitemaps`, `gsc-backlinks`, `gsc-page-experience`,
+  `gsc-structured-data`
 - write surfaces (sitemap CRUD, site CRUD): also `gsc-sitemaps`
 
 The `gsc-audit` skill calls `scripts/gsc_audit.py` directly — it's a

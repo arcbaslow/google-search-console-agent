@@ -36,10 +36,13 @@ from typing import Any
 
 import gsc_admin
 import gsc_auth
+import gsc_backlinks
 import gsc_benchmarks
 import gsc_crux
 import gsc_data
+import gsc_page_experience
 import gsc_report
+import gsc_structured_data
 from gsc_utils import normalize_site_url
 
 
@@ -345,25 +348,228 @@ def run_url_inspect_stub():
     )
 
 
+def run_structured_data(site_url, sample_size=20):
+    """Sample N URLs from the sitemap and validate JSON-LD blocks against
+    Google's required-field expectations per schema type."""
+    site_url = normalize_site_url(site_url)
+    findings: list[dict[str, Any]] = []
+    try:
+        out = gsc_structured_data.analyze_sitemap_sample(site_url, sample_size=sample_size)
+    except Exception as e:
+        return _ok("gsc-structured-data", f"structured-data scan failed: {e}", [
+            {"severity": "Low", "title": "Structured-data analyzer error", "detail": str(e)},
+        ])
+
+    if out.get("error"):
+        return _ok("gsc-structured-data", f"could not sample sitemap: {out['error']}", [
+            {"severity": "Low",
+             "title": "No sitemap URLs available for structured-data sampling",
+             "detail": "Skipping. Submit a sitemap or pass a URL via /gsc structured-data --url ..."}
+        ], out)
+
+    rollup = out.get("rollup") or {}
+    verdicts = rollup.get("block_verdicts") or {}
+    has_jsonld = rollup.get("urls_with_jsonld", 0)
+    analyzed = rollup.get("urls_analyzed", 0)
+    coverage_pct = round((has_jsonld / analyzed) * 100, 1) if analyzed else 0
+
+    if analyzed and has_jsonld == 0:
+        findings.append({
+            "severity": "Medium",
+            "title": "No JSON-LD found on any sampled URL",
+            "detail": (
+                f"Sampled {analyzed} URLs from the sitemap; none carry "
+                "JSON-LD structured data. Rich-results eligibility is lost. "
+                "Add Schema.org markup for the relevant page types (Product, "
+                "Article, FAQPage, BreadcrumbList, Organization)."
+            ),
+        })
+    elif verdicts.get("fail", 0):
+        findings.append({
+            "severity": "High",
+            "title": f"{verdicts['fail']} JSON-LD block(s) missing required fields",
+            "detail": (
+                f"Top missing fields across the sample: "
+                f"{rollup.get('top_missing_required') or {}}. "
+                "Fix these to restore rich-results eligibility."
+            ),
+        })
+    elif verdicts.get("partial", 0):
+        findings.append({
+            "severity": "Medium",
+            "title": f"{verdicts['partial']} JSON-LD block(s) missing recommended fields",
+            "detail": (
+                "Schemas validate but lack recommended fields that improve "
+                "rich-results eligibility (e.g. Product.aggregateRating, "
+                "Article.dateModified)."
+            ),
+        })
+
+    summary = (
+        f"{analyzed} URLs sampled, JSON-LD coverage {coverage_pct}%, "
+        f"verdicts {verdicts}"
+    )
+    return _ok("gsc-structured-data", summary, findings, out)
+
+
+def run_backlinks(site_url, competitors=None):
+    """Domain rank for the property plus optional competitor comparison."""
+    site_url = normalize_site_url(site_url)
+    bare_domain = site_url.split("sc-domain:")[-1] if site_url.startswith("sc-domain:") \
+        else site_url
+    findings: list[dict[str, Any]] = []
+
+    domains = [bare_domain] + (competitors or [])
+    out = gsc_backlinks.compare_domains(domains) if competitors else \
+        {"rows": [_single_row(bare_domain)], "primary": bare_domain}
+
+    primary_row = next((r for r in out.get("rows") or [] if r["domain"].endswith(bare_domain)), None)
+    if not primary_row:
+        return _ok("gsc-backlinks", "could not look up domain rank", [], out)
+
+    band = primary_row.get("tranco_band")
+    opr_dec = primary_row.get("open_pagerank_decimal")
+    if opr_dec is not None and opr_dec < 2.0:
+        findings.append({
+            "severity": "Medium",
+            "title": f"Open PageRank {opr_dec:.1f} suggests low backlink authority",
+            "detail": (
+                "Open PageRank below 2 / 10. Competitor outreach, digital PR, "
+                "and editorial link-building have outsized ROI from this baseline."
+            ),
+        })
+
+    if competitors:
+        ranked = [r for r in out["rows"] if r.get("tranco_rank") is not None]
+        ranked.sort(key=lambda r: r["tranco_rank"])
+        position = next((i for i, r in enumerate(ranked, 1)
+                          if r["domain"].endswith(bare_domain)), None)
+        if position and position > 1 and len(ranked) > 1:
+            findings.append({
+                "severity": "Medium",
+                "title": f"Site ranks #{position} of {len(ranked)} in the competitor set (Tranco)",
+                "detail": (
+                    "Tranco rank is a composite popularity signal, not pure authority. "
+                    "Combined with Open PageRank it sketches the gap that needs closing."
+                ),
+            })
+
+    summary = f"primary domain {bare_domain}: Tranco {band}"
+    if opr_dec is not None:
+        summary += f", Open PageRank {opr_dec:.1f}"
+    return _ok("gsc-backlinks", summary, findings, out)
+
+
+def _single_row(domain):
+    rank = gsc_backlinks.tranco_rank(domain)
+    return {"domain": domain, "tranco_rank": rank,
+            "tranco_band": gsc_backlinks._tranco_band(rank)}
+
+
+def run_page_experience(site_url):
+    """Local header probe + Mozilla Observatory + SSL Labs."""
+    origin = _origin_of(normalize_site_url(site_url))
+    host = origin.replace("https://", "").replace("http://", "").rstrip("/")
+    findings: list[dict[str, Any]] = []
+
+    report = gsc_page_experience.full_report(host)
+
+    headers_report = report.get("headers") or {}
+    if headers_report.get("error"):
+        findings.append({
+            "severity": "Medium",
+            "title": "Could not probe security headers",
+            "detail": headers_report.get("message") or headers_report.get("error"),
+        })
+    elif headers_report.get("grade") == "poor":
+        findings.append({
+            "severity": "High",
+            "title": f"Security-header coverage {headers_report.get('coverage_pct')}% (poor)",
+            "detail": "Missing: " + ", ".join(headers_report.get("headers_missing", [])),
+        })
+    elif headers_report.get("grade") == "needs_improvement":
+        findings.append({
+            "severity": "Medium",
+            "title": f"Security-header coverage {headers_report.get('coverage_pct')}% (needs improvement)",
+            "detail": "Missing: " + ", ".join(headers_report.get("headers_missing", [])),
+        })
+
+    obs = report.get("observatory") or {}
+    if obs.get("grade") and obs.get("grade") in ("D", "E", "F"):
+        findings.append({
+            "severity": "High",
+            "title": f"Mozilla Observatory grade {obs['grade']}",
+            "detail": (
+                f"Score {obs.get('score')}; tests passed "
+                f"{obs.get('tests_passed')} / {obs.get('tests_quantity')}. "
+                "See https://developer.mozilla.org/en-US/observatory for the rule list."
+            ),
+        })
+    elif obs.get("grade") in ("B", "C"):
+        findings.append({
+            "severity": "Medium",
+            "title": f"Mozilla Observatory grade {obs['grade']}",
+            "detail": f"Score {obs.get('score')}. Headroom for CSP / Referrer-Policy hardening.",
+        })
+
+    ssl = report.get("ssl_labs") or {}
+    if ssl.get("grade") in ("B", "C", "D", "E", "F", "T", "M"):
+        findings.append({
+            "severity": "High" if ssl.get("grade") in ("D", "E", "F", "T", "M") else "Medium",
+            "title": f"SSL Labs grade {ssl['grade']}",
+            "detail": (
+                "TLS configuration falls short of A. Check supported protocol "
+                "versions (TLS 1.0 / 1.1 should be disabled), cipher suites, "
+                "and certificate-chain completeness."
+            ),
+        })
+
+    summary_bits = []
+    if headers_report.get("grade"):
+        summary_bits.append(f"headers {headers_report['grade']}")
+    if obs.get("grade"):
+        summary_bits.append(f"observatory {obs['grade']}")
+    if ssl.get("grade"):
+        summary_bits.append(f"ssl-labs {ssl['grade']}")
+    summary = "; ".join(summary_bits) or "page-experience scan complete"
+
+    return _ok("gsc-page-experience", summary, findings, report)
+
+
 # ---------- Orchestrator ----------
 
 def orchestrate(site_url, days=28, form_factor="ALL_FORM_FACTORS",
-                with_history=False, max_queries=30):
+                with_history=False, max_queries=30,
+                with_backlinks=False, competitors=None,
+                with_page_experience=False, structured_data_sample=20):
     site_url_norm = normalize_site_url(site_url)
     overview_agent, overview_data = run_overview(site_url_norm)
 
     agents_output: list[dict[str, Any]] = [overview_agent]
 
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        f_search = ex.submit(run_search_analytics, site_url_norm, days)
-        f_ctr = ex.submit(run_ctr_curve, site_url_norm, days, max_queries)
-        f_cwv = ex.submit(run_cwv, site_url_norm, form_factor, with_history)
-        f_url = ex.submit(run_url_inspect_stub)
-        agents_output.extend([f.result() for f in (f_search, f_ctr, f_cwv, f_url)])
+    # The default audit fans out the cheap / always-on agents.
+    # Backlinks and page-experience are opt-in (external network polling).
+    futures = {}
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        futures["search"] = ex.submit(run_search_analytics, site_url_norm, days)
+        futures["ctr"] = ex.submit(run_ctr_curve, site_url_norm, days, max_queries)
+        futures["cwv"] = ex.submit(run_cwv, site_url_norm, form_factor, with_history)
+        futures["structured"] = ex.submit(run_structured_data, site_url_norm,
+                                           structured_data_sample)
+        if with_backlinks:
+            futures["backlinks"] = ex.submit(run_backlinks, site_url_norm,
+                                              competitors=competitors)
+        if with_page_experience:
+            futures["page_exp"] = ex.submit(run_page_experience, site_url_norm)
+        futures["url_stub"] = ex.submit(run_url_inspect_stub)
 
-    # Confidence is mechanical here — we don't have a sampling signal from GSC
-    # API responses, so default to "medium" unless the search analytics totally
-    # failed.
+        # Collect in a stable order so the report sections are predictable.
+        ordered = ["search", "ctr", "cwv", "structured", "backlinks",
+                    "page_exp", "url_stub"]
+        for key in ordered:
+            if key in futures:
+                agents_output.append(futures[key].result())
+
     confidence = "medium"
     sa = next((a for a in agents_output if a["agent"] == "gsc-search-analytics"), None)
     if sa and any(f.get("severity") == "High" for f in sa.get("findings", [])):
@@ -382,6 +588,13 @@ def main():
                         choices=("PHONE", "DESKTOP", "TABLET", "ALL_FORM_FACTORS"))
     parser.add_argument("--with-history", action="store_true",
                         help="Include CrUX 25-week history")
+    parser.add_argument("--with-backlinks", action="store_true",
+                        help="Run the domain-authority agent (Open PageRank + Tranco)")
+    parser.add_argument("--competitors", help="Comma-separated competitor domains for --with-backlinks")
+    parser.add_argument("--with-page-experience", action="store_true",
+                        help="Run Mozilla Observatory + SSL Labs + local header probe")
+    parser.add_argument("--structured-data-sample", type=int, default=20,
+                        help="URLs to sample from the sitemap for structured-data validation")
     parser.add_argument("--max-queries", type=int, default=30,
                         help="Number of top queries scanned for the CTR-curve check")
     parser.add_argument("--format", choices=("md", "html", "pdf", "json"), default="md")
@@ -394,10 +607,17 @@ def main():
         print(json.dumps({"error": "no_credentials", "hint": e.hint}), file=sys.stderr)
         return 2
 
+    competitors = None
+    if args.competitors:
+        competitors = [c.strip() for c in args.competitors.split(",") if c.strip()]
+
     try:
         agents_output, overview, confidence = orchestrate(
             site_url=args.site, days=args.days, form_factor=args.form_factor,
             with_history=args.with_history, max_queries=args.max_queries,
+            with_backlinks=args.with_backlinks, competitors=competitors,
+            with_page_experience=args.with_page_experience,
+            structured_data_sample=args.structured_data_sample,
         )
     except Exception as e:
         print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)

@@ -40,6 +40,11 @@ python scripts/gsc_audit.py --site example.com --output audit.md
 python scripts/gsc_data.py --site example.com --queries --days 28 --json
 python scripts/gsc_crux.py --origin https://example.com --json
 python scripts/gsc_psi.py --url https://example.com/products/foo --json
+
+# Free open-data signals — no API keys (Tranco) or one free key (Open PageRank)
+python scripts/gsc_backlinks.py --compare example.com,competitor.com --json
+python scripts/gsc_page_experience.py --host example.com --json
+python scripts/gsc_structured_data.py --site example.com --sample 25 --json
 ```
 
 For the full command list, see [AGENTS.md](AGENTS.md).

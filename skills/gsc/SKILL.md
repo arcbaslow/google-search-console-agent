@@ -41,6 +41,9 @@ Read commands:
 | `/gsc cwv <site>` | Core Web Vitals via CrUX (origin-level) |
 | `/gsc pagespeed <url>` | PageSpeed Insights (per-URL Lighthouse) |
 | `/gsc sitemaps <site>` | List sitemaps and their error / warning counts |
+| `/gsc backlinks <domain>` | Domain authority via Tranco + Open PageRank (free) |
+| `/gsc page-experience <host>` | Mozilla Observatory + SSL Labs + local header probe |
+| `/gsc structured-data <site>` | Sitemap-wide JSON-LD validation |
 | `/gsc benchmarks` | Inspect bundled CWV thresholds and the CTR-by-position curve |
 
 Write commands (need the `webmasters` scope, not `.readonly`):
@@ -70,6 +73,9 @@ Auth:
 | `cwv <site>` | gsc-core-web-vitals skill |
 | `pagespeed <url>` | gsc-pagespeed skill |
 | `sitemaps <site>` / `submit-sitemap` / `delete-sitemap` | gsc-sitemaps skill |
+| `backlinks <domain>` | gsc-backlinks skill |
+| `page-experience <host>` | gsc-page-experience skill |
+| `structured-data <site>` / `<url>` | gsc-structured-data skill |
 | `benchmarks ...` | Run `python scripts/gsc_benchmarks.py` |
 | `auth` | Run `python scripts/gsc_auth.py --adc` (or `--oauth` as fallback) |
 | `sites` | Run `python scripts/gsc_auth.py --sites` |
@@ -82,6 +88,9 @@ Auth:
 - "How's our Core Web Vitals?" -> gsc-core-web-vitals
 - "Audit this PDP for performance" -> gsc-pagespeed
 - "Are my sitemaps healthy?" -> gsc-sitemaps
+- "Who's linking to us / how authoritative are we vs competitors" -> gsc-backlinks
+- "Are our security headers / HTTPS OK" -> gsc-page-experience
+- "Are our rich-results valid across the site" -> gsc-structured-data
 - "Full health check" -> gsc-audit
 - "Compare against the industry" -> gsc-benchmarks (or part of gsc-audit)
 

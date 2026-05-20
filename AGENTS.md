@@ -88,6 +88,36 @@ sparingly; do not bulk-iterate.
 | `python scripts/gsc_admin.py --site X --feedpath URL --submit-sitemap --json` | Submit |
 | `python scripts/gsc_admin.py --site X --feedpath URL --delete-sitemap --json` | Delete |
 
+### Backlinks / domain authority
+
+| Command | Purpose |
+|---------|---------|
+| `python scripts/gsc_backlinks.py --domain example.com --json` | Single domain — Tranco rank + Open PageRank (needs `OPENPAGERANK_API_KEY`) |
+| `python scripts/gsc_backlinks.py --compare site.com,comp1.com,comp2.com --json` | Competitor comparison |
+| `python scripts/gsc_backlinks.py --tranco example.com --json` | Tranco-only lookup (no key) |
+
+Setup: free signup at https://www.domcop.com/openpagerank/ → export `OPENPAGERANK_API_KEY=...`. Without it, only Tranco data is returned.
+
+### Page experience / security
+
+| Command | Purpose |
+|---------|---------|
+| `python scripts/gsc_page_experience.py --host example.com --json` | Everything — Observatory + SSL Labs + local headers |
+| `python scripts/gsc_page_experience.py --host example.com --headers --json` | Local-only fast probe |
+| `python scripts/gsc_page_experience.py --host example.com --observatory --json` | Mozilla Observatory only |
+| `python scripts/gsc_page_experience.py --host example.com --ssl --json` | SSL Labs only |
+
+No API keys required. SSL Labs scans can take 60-120s; cached results return instantly.
+
+### Structured data (JSON-LD)
+
+| Command | Purpose |
+|---------|---------|
+| `python scripts/gsc_structured_data.py --url https://X/foo --json` | Single-URL deep dive |
+| `python scripts/gsc_structured_data.py --site example.com --sample 25 --json` | Sitemap-wide audit (25 URLs sampled) |
+
+All local. Returns per-block verdicts (`pass` / `partial` / `fail` / `untyped` / `invalid`) plus a rollup of the most-commonly-missing required fields across the sample.
+
 ### Benchmarks
 
 | Command | Purpose |
@@ -102,6 +132,8 @@ sparingly; do not bulk-iterate.
 | Command | Purpose |
 |---------|---------|
 | `python scripts/gsc_audit.py --site X --output audit.md` | One-command full audit, markdown |
+| `python scripts/gsc_audit.py --site X --with-backlinks --competitors a.com,b.com --output audit.md` | Same plus competitor comparison |
+| `python scripts/gsc_audit.py --site X --with-page-experience --output audit.md` | Same plus Observatory + SSL Labs (slow, polls external services) |
 | `python scripts/gsc_audit.py --site X --format html --output audit.html` | HTML version |
 | `python scripts/gsc_audit.py --site X --format pdf --output audit.pdf` | PDF via WeasyPrint |
 | `python scripts/gsc_report.py --site X --inputs a.json,b.json --format md --output audit.md` | Render from pre-collected agent outputs |

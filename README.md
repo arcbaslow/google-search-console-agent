@@ -32,9 +32,19 @@ account. Auth is gcloud Application Default Credentials.
   accessibility, best-practices, lab + field metrics, full audit blob.
 - **Sitemaps**: list, get, submit, delete. With error / warning counts
   surfaced as audit findings.
+- **Domain authority**: Tranco top-1M + Open PageRank for the property
+  and any supplied competitors. No paid API.
+- **Page experience**: Mozilla HTTP Observatory + SSL Labs + local
+  security-headers probe. Grades HTTPS quality and header hygiene —
+  both ranking signals that GSC's API does not expose.
+- **Structured data**: sitemap-wide JSON-LD validation against Google's
+  rich-results required-field rules. Local parser, no quota cost,
+  complements URL Inspection.
 - **Full audit**: one command that orchestrates context → search
-  analytics → CTR curve → sitemap health → CWV in parallel and renders
-  a benchmarked markdown report.
+  analytics → CTR curve → sitemap health → CWV → structured data in
+  parallel and renders a benchmarked markdown report. Add
+  `--with-backlinks` and `--with-page-experience` for the slower
+  external-service checks.
 
 ## Requirements
 
@@ -150,6 +160,9 @@ Read:
 /gsc cwv <site>                  Core Web Vitals via CrUX
 /gsc pagespeed <url>             per-URL Lighthouse pass
 /gsc sitemaps <site>             list sitemaps with error / warning counts
+/gsc backlinks <domain>          domain authority via Tranco + Open PageRank (free)
+/gsc page-experience <host>      Mozilla Observatory + SSL Labs + local header probe
+/gsc structured-data <site>      sitemap-wide JSON-LD validation
 /gsc benchmarks                  inspect CWV thresholds and the CTR-by-position curve
 ```
 
@@ -244,8 +257,11 @@ hand-crafted audit showing the markdown report shape.
 
 ## Status
 
-v0.1.0 — read path complete. Sitemap CRUD wired and unit-tested but
-not yet covered by integration tests against a live property.
+v0.2.0 — backlinks (Tranco + Open PageRank), page-experience
+(Observatory + SSL Labs + local headers), and structured-data
+(sitemap-wide JSON-LD validation) added. All read-side surfaces are
+unit-tested with mocks. Sitemap CRUD wired and tested but not yet
+covered by integration tests against a live property.
 
 ## License
 

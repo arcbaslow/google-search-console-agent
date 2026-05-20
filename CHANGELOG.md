@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0
+
+- Add `gsc_backlinks.py` — domain-authority adapter combining Open
+  PageRank (optional free API key) and Tranco top-1M (no key,
+  weekly-refreshed local cache). Surfaces how authoritative a domain
+  is vs competitors. Common Crawl noted as a future direction for the
+  literal link graph.
+- Add `gsc_page_experience.py` — Mozilla HTTP Observatory + SSL Labs +
+  a local security-headers probe. Grades HSTS, CSP, Referrer-Policy,
+  Permissions-Policy, X-Content-Type, X-Frame-Options, plus full TLS
+  configuration. All sources free, no API keys.
+- Add `gsc_structured_data.py` — local JSON-LD parser and Schema.org
+  required-field validator. Site-wide rich-results audit (sitemap
+  sample mode) and per-URL deep dive. Complements `gsc-url-inspect`
+  which is quota-heavy and one URL at a time.
+- Wire the three new agents into the audit driver. `structured-data`
+  is always-on; `backlinks` (Open PageRank polling + Tranco lookup)
+  and `page-experience` (Observatory + SSL Labs polling) are opt-in
+  via `--with-backlinks` / `--competitors` and `--with-page-experience`.
+- New skills: `gsc-backlinks`, `gsc-page-experience`,
+  `gsc-structured-data`. New agents: matching `agents/gsc-*.md`.
+- 47 new tests across the three new modules.
+
 ## 0.1.0
 
 - Initial scaffold and v0.1 feature set.
