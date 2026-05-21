@@ -29,7 +29,7 @@ gcloud services enable searchconsole.googleapis.com \
                        chromeuxreport.googleapis.com
 ```
 
-## 2.5. Install Python deps
+## 3. Install Python deps
 
 The fastest path is [`uv`](https://github.com/astral-sh/uv):
 
@@ -46,7 +46,19 @@ source .venv/bin/activate              # or .venv\Scripts\Activate.ps1 on Window
 pip install -r scripts/requirements.txt
 ```
 
-## 3. Authenticate (default path: gcloud ADC)
+For PDF report rendering (optional — markdown is the default):
+
+```
+pip install -e ".[pdf]"
+```
+
+For development (running tests, lint):
+
+```
+pip install -e ".[dev]"
+```
+
+## 4. Authenticate (default path: gcloud ADC)
 
 For read-only analysis:
 
@@ -87,14 +99,14 @@ python scripts/gsc_auth.py --adc --write  # write scope
 The same ADC token works against PageSpeed Insights and the Chrome UX
 Report API — no separate API keys.
 
-## 4. Confirm property ownership
+## 5. Confirm property ownership
 
 GSC's API only returns data for properties the authenticated Google
 account has at least Restricted access to. Add yourself as a user in
 the Search Console UI (Settings → Users and permissions) before
 running the audit.
 
-## 5. Try a single command
+## 6. Try a single command
 
 ```
 python scripts/gsc_data.py --site example.com --queries --days 7 --rows 25 --json
@@ -102,7 +114,7 @@ python scripts/gsc_data.py --site example.com --queries --days 7 --rows 25 --jso
 
 If queries come back, you're set.
 
-## 6. Run the full audit
+## 7. Run the full audit
 
 From any runtime (Codex, Gemini CLI, plain shell):
 
@@ -126,7 +138,7 @@ This goes through the LLM-powered specialist agents and produces a
 richer report. The mechanical driver above is the same shape but
 deterministic, useful in CI or under runtimes without subagent support.
 
-## 7. Inspect benchmarks
+## 8. Inspect benchmarks
 
 ```
 python scripts/gsc_benchmarks.py --list

@@ -79,6 +79,11 @@ uv run python scripts/gsc_auth.py --check
 and runner. One install of `uv` replaces the venv + pip dance and is
 faster on cold-start.
 
+### Optional extras
+
+- `pip install -e ".[pdf]"` — adds WeasyPrint for PDF report rendering. Markdown is the default audit format and needs no extra system libs.
+- `pip install -e ".[dev]"` — adds pytest + ruff for contributors.
+
 ### Plain venv (works everywhere)
 
 ```
