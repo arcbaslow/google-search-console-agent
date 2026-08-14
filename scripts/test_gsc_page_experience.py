@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, patch
 
 import gsc_page_experience
 
-
 # ---------- helpers ----------
 
 def test_strip_scheme_handles_sc_domain():

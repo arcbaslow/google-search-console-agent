@@ -68,3 +68,10 @@ Pass `--format html` or `--format pdf` when the user wants those.
 - No `feat:` / `fix:` / `chore:` Conventional Commits prefixes.
 - No `Co-Authored-By:` trailers, no `Generated with...` footers, no emoji.
 - Commit message style: short imperative sentence, sentence-case acceptable.
+
+## Asset role (2026-08)
+
+Shipped and public. Maintenance mode: bugfixes, Google API version bumps,
+and docs only - the active OSS build slot belongs to capi-kit. Role:
+portfolio proof for the measurement practice; the README should keep a link
+to Good Labs services. New features need an explicit owner decision.
