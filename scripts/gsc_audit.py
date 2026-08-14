@@ -45,7 +45,6 @@ import gsc_report
 import gsc_structured_data
 from gsc_utils import normalize_site_url
 
-
 # ---------- Helpers ----------
 
 def _ok(agent, summary, findings=None, data=None):

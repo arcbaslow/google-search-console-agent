@@ -26,11 +26,26 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = []
+# The adapters are flat modules under scripts/, not a package. Without this
+# the built sdist and wheel contain no importable code at all, which makes a
+# release artifact meaningless.
+package-dir = { "" = "scripts" }
+py-modules = [
+  "gsc_admin", "gsc_audit", "gsc_auth", "gsc_backlinks", "gsc_benchmarks",
+  "gsc_crux", "gsc_data", "gsc_page_experience", "gsc_psi", "gsc_report",
+  "gsc_structured_data", "gsc_utils",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+# Pinned explicitly. Ruff's implicit default rule set changes between
+# releases, which turns an unrelated ruff upgrade into a red CI run - which
+# is exactly what happened here: this repo's last green run was 2026-05-22
+# and a re-run today reported 55 findings with no code change.
+select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.pytest.ini_options]
 testpaths = ["scripts"]

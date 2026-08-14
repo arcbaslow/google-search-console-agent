@@ -1,11 +1,9 @@
 """Tests for gsc_backlinks. All HTTP is mocked."""
 
 import json
-from unittest.mock import patch, MagicMock
-
+from unittest.mock import MagicMock, patch
 
 import gsc_backlinks
-
 
 # ---------- helpers ----------
 
