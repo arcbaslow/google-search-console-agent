@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1 - 2026-08-14
+
+- `scrub_pii` returned any all-digit string unmodified before the phone pass
+  ran, so phone numbers, card numbers and national IDs reached the on-disk
+  cache verbatim.
+- `PHONE_RE` matched on length rather than digit count, so `2026-08-14`
+  redacted to `[phone-redacted]` - every value in the GSC `date` dimension,
+  meaning a cached time series came back with its dates destroyed. Redaction
+  now requires nine real digits.
+- Dots added to the phone separator class, and values are also checked
+  percent-decoded since GSC returns page dimensions encoded.
+- Ruff lint selection pinned. A re-run of CI reported 55 findings with no code
+  change after ruff's implicit defaults widened, and lint runs before tests.
+- The adapter modules are actually packaged now; `py-modules = []` meant a
+  built wheel contained no importable code.
+- Release workflow, Dependabot, and a version-consistency test.
+
 ## 0.2.0
 
 - Add `gsc_backlinks.py` — domain-authority adapter combining Open
