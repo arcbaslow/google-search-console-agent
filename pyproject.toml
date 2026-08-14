@@ -26,7 +26,15 @@ dev = [
 ]
 
 [tool.setuptools]
-py-modules = []
+# The adapters are flat modules under scripts/, not a package. Without this
+# the built sdist and wheel contain no importable code at all, which makes a
+# release artifact meaningless.
+package-dir = { "" = "scripts" }
+py-modules = [
+  "gsc_admin", "gsc_audit", "gsc_auth", "gsc_backlinks", "gsc_benchmarks",
+  "gsc_crux", "gsc_data", "gsc_page_experience", "gsc_psi", "gsc_report",
+  "gsc_structured_data", "gsc_utils",
+]
 
 [tool.ruff]
 line-length = 100
