@@ -20,7 +20,7 @@ pdf = [
   "weasyprint>=60,<70"
 ]
 dev = [
-  "pytest>=7.4,<9",
+  "pytest>=7.4,<10",
   "pytest-cov>=4.1,<6",
   "ruff>=0.1,<1"
 ]
