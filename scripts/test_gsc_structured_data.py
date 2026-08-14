@@ -3,7 +3,6 @@
 
 import gsc_structured_data
 
-
 # ---------- extract_jsonld ----------
 
 def test_extract_jsonld_single_object():

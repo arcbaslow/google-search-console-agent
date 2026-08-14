@@ -26,7 +26,6 @@ import json
 import sys
 from typing import Any
 
-
 # CWV thresholds — official Google buckets. Lower is better. Numbers are
 # the p75 of a 28-day window across real visits.
 CWV_THRESHOLDS: dict[str, dict[str, float]] = {

@@ -1,9 +1,7 @@
 """Tests for the GSC / CWV benchmark engine."""
 
-import pytest
-
 import gsc_benchmarks
-
+import pytest
 
 # ---------- CWV thresholds ----------
 

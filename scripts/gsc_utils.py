@@ -12,6 +12,7 @@ import hashlib
 import json
 import re
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,22 @@ CACHE_DIR = Path.home() / ".claude" / "gsc-cache"
 CACHE_TTL_SECONDS = 15 * 60
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-PHONE_RE = re.compile(r"\+?\d[\d\s\-()]{7,}\d")
+# Dots are a real-world phone separator (+7.701.234.5678) and were missing from
+# the separator class, so dotted numbers passed through untouched.
+PHONE_RE = re.compile(r"\+?\d[\d\s\-.()]{7,}\d")
+# A match only counts as a phone if it carries enough actual digits. Without
+# this, `2026-08-14` matches on length alone - and that is the shape of every
+# value in the GSC `date` dimension, so a cached time series came back with
+# every date replaced by the redaction marker.
+_MIN_PHONE_DIGITS = 9
+
+
+def _redact_phones(text: str) -> str:
+    def repl(m: re.Match[str]) -> str:
+        digits = sum(1 for c in m.group(0) if c.isdigit())
+        return "[phone-redacted]" if digits >= _MIN_PHONE_DIGITS else m.group(0)
+
+    return PHONE_RE.sub(repl, text)
 PII_PARAM_DENY = {
     "email",
     "user_email",
@@ -71,10 +87,21 @@ def scrub_pii(data: Any) -> Any:
     if isinstance(data, list):
         return [scrub_pii(x) for x in data]
     if isinstance(data, str):
-        if re.match(r"^-?\d+(\.\d+)?$", data):
-            return data
+        # No numeric short-circuit here. It used to return any all-digit string
+        # unchanged, which is exactly the shape of a phone number, a card
+        # number, or a national ID - and search queries contain all three.
+        # Genuine metrics arrive as int/float and fall through at the bottom.
         s = EMAIL_RE.sub("[email-redacted]", data)
-        s = PHONE_RE.sub("[phone-redacted]", s)
+        s = _redact_phones(s)
+        # GSC returns page dimensions percent-encoded, so an address that
+        # survives the pass above can still be sitting in the URL as
+        # `john%40gmail.com`. Redact against the decoded form, then keep
+        # whichever version still has something to hide.
+        decoded = urllib.parse.unquote(s)
+        if decoded != s:
+            decoded = _redact_phones(EMAIL_RE.sub("[email-redacted]", decoded))
+            if "redacted]" in decoded and "redacted]" not in s:
+                return decoded
         return s
     return data
 

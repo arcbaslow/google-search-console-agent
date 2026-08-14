@@ -13,8 +13,8 @@ def tmp_cache_dir(monkeypatch, tmp_path):
     """Redirect cache and credentials to a temp dir for every test."""
     cache_dir = tmp_path / "gsc-cache"
     creds_path = tmp_path / "gsc-credentials.json"
-    import gsc_utils
     import gsc_auth
+    import gsc_utils
     monkeypatch.setattr(gsc_utils, "CACHE_DIR", cache_dir)
     monkeypatch.setattr(gsc_auth, "CREDENTIALS_PATH", creds_path)
     return tmp_path

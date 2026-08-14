@@ -2,7 +2,6 @@
 
 import gsc_report
 
-
 AGENT_OUTPUTS = [
     {
         "agent": "gsc-overview",

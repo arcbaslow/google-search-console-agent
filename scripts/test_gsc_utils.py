@@ -1,8 +1,7 @@
 """Tests for gsc_utils."""
 
-
-
 import gsc_utils
+import pytest
 
 
 def test_normalize_bare_domain_to_sc_domain():
@@ -54,6 +53,60 @@ def test_scrub_pii_drops_deny_keys_and_redacts_emails_and_phones():
     assert "[phone-redacted]" in out["query"]
     assert out["list"][0] == "[email-redacted]"
     assert out["list"][1] == "ok"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "77012345678",       # KZ mobile, bare
+        "4111111111111111",  # card number
+        "123456789",         # national-ID shaped
+    ],
+)
+def test_scrub_pii_redacts_bare_digit_runs(value):
+    """A numeric short-circuit used to return these unchanged.
+
+    Search queries genuinely contain phone numbers, card numbers and national
+    IDs, and the scrubbed value is what gets written to the on-disk cache.
+    """
+    assert gsc_utils.scrub_pii(value) == "[phone-redacted]"
+
+
+def test_scrub_pii_redacts_dot_separated_phone():
+    assert gsc_utils.scrub_pii("call +7.701.234.5678 now") == "call [phone-redacted] now"
+
+
+def test_scrub_pii_redacts_percent_encoded_email():
+    """GSC returns page dimensions percent-encoded."""
+    out = gsc_utils.scrub_pii("/contact?to=john%40gmail.com")
+    assert "john" not in out
+    assert "[email-redacted]" in out
+
+
+def test_scrub_pii_leaves_real_metrics_alone():
+    """Metrics arrive as int/float, not strings, and must not be touched."""
+    payload = {"clicks": 1234567890, "impressions": 42, "position": 3.7, "ctr": 0.0512}
+    assert gsc_utils.scrub_pii(payload) == payload
+
+
+def test_scrub_pii_leaves_short_numbers_and_dates_alone():
+    """`date` dimension values must survive.
+
+    `2026-08-14` matched PHONE_RE on length alone, so every date in a cached
+    time series came back as the redaction marker.
+    """
+    assert gsc_utils.scrub_pii("2026-08-14") == "2026-08-14"
+    assert gsc_utils.scrub_pii("20260814") == "20260814"
+    assert gsc_utils.scrub_pii("42") == "42"
+    assert gsc_utils.scrub_pii("2026-08-14T00:00:00") == "2026-08-14T00:00:00"
+
+
+def test_scrub_pii_preserves_a_date_keyed_time_series():
+    rows = [
+        {"keys": ["2026-08-12"], "clicks": 120, "impressions": 4300},
+        {"keys": ["2026-08-13"], "clicks": 98, "impressions": 3900},
+    ]
+    assert gsc_utils.scrub_pii(rows) == rows
 
 
 def test_cache_set_get_roundtrip(monkeypatch, tmp_path):

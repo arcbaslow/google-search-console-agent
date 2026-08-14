@@ -1,8 +1,7 @@
 """Tests for gsc_auth helpers (no network)."""
 
-import pytest
-
 import gsc_auth
+import pytest
 
 
 def test_scopes_for_read():

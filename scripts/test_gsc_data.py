@@ -2,9 +2,8 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 import gsc_data
+import pytest
 
 
 def test_parse_filter_equals():

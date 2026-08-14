@@ -26,7 +26,6 @@ from typing import Any
 from gsc_auth import get_credentials
 from gsc_utils import cache_get, cache_set, date_range, normalize_site_url, scrub_pii
 
-
 _FILTER_RE = re.compile(
     r"^\s*(?P<dim>\w+)\s+(?P<op>=|!=|CONTAINS|EQUALS|NOT_CONTAINS|NOT_EQUALS|INCLUDING_REGEX|EXCLUDING_REGEX)\s+(?P<val>.+?)\s*$",
     re.IGNORECASE,
