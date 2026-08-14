@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/arcbaslow/google-search-console-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/arcbaslow/google-search-console-agent/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.2.1-blue.svg)](CHANGELOG.md)
 
 A multi-agent toolkit for Google Search Console. Talks to the GSC
 Search Analytics, Sites, Sitemaps, and URL Inspection APIs, plus the
