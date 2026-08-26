@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="google-search-console-agent - Search analytics, CWV and rich results" width="880">
+</p>
+
 # google-search-console-agent
 
 [![tests](https://github.com/arcbaslow/google-search-console-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/arcbaslow/google-search-console-agent/actions/workflows/tests.yml)
