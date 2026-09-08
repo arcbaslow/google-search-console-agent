@@ -1,0 +1,23 @@
+{
+  "agent": "gsc-core-web-vitals",
+  "summary": "Synthetic demo: mobile LCP needs attention; INP and CLS remain within the bundled good bands.",
+  "findings": [
+    {
+      "severity": "High",
+      "title": "Mobile LCP falls in the poor band",
+      "detail": "Inspect the largest content element and compare field data with a targeted Lighthouse run.",
+      "metric": "lcp_p75_ms",
+      "metric_value": 4350
+    },
+    {
+      "severity": "Low",
+      "title": "Keep the healthy interaction baseline",
+      "detail": "Retain the current INP and CLS measurements as a reference for future changes."
+    }
+  ],
+  "data": {
+    "lcp_p75_ms": 4350,
+    "inp_p75_ms": 180,
+    "cls_p75": 0.05
+  }
+}

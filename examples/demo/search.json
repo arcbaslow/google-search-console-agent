@@ -1,0 +1,16 @@
+{
+  "agent": "gsc-search-analytics",
+  "summary": "Synthetic demo: 12,400 clicks from 310,000 impressions.",
+  "findings": [
+    {
+      "severity": "High",
+      "title": "Review titles for high-impression pages",
+      "detail": "The sample pricing page ranks prominently but has low CTR. Inspect the query mix and search-result appearance before editing titles."
+    }
+  ],
+  "data": {
+    "clicks": 12400,
+    "impressions": 310000,
+    "ctr": 0.04
+  }
+}
