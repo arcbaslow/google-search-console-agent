@@ -9,11 +9,7 @@ file covers Claude Code-specific notes only.
 Claude Code loads `skills/gsc/SKILL.md` as the top-level router. It
 exposes `/gsc <command>` and routes to:
 
-- read skills: `gsc-audit`, `gsc-search-analytics`, `gsc-ctr-curve`,
-  `gsc-url-inspect`, `gsc-core-web-vitals`, `gsc-pagespeed`,
-  `gsc-sitemaps`, `gsc-backlinks`, `gsc-page-experience`,
-  `gsc-structured-data`
-- write surfaces (sitemap CRUD, site CRUD): also `gsc-sitemaps`
+- `gsc-sitemaps` is the only skill with write surfaces (sitemap CRUD, site CRUD).
 
 The `gsc-audit` skill calls `scripts/gsc_audit.py` directly — it's a
 deterministic mechanical orchestrator. For richer LLM-driven analysis
