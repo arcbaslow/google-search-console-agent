@@ -26,12 +26,13 @@ download time, indexed-URL counts, and error / warning counts.
 
 ## Confirmation flow
 
-For every write (submit / delete), the agent must:
+For sitemap submit/delete and site add/delete, invoke the adapter interactively.
+It prints the resolved property and absolute sitemap URL to stderr and asks
+`Apply? [y/N]` before auth or API access. Let the user answer; never supply an
+automatic `y`. Refusal, EOF or interruption returns `status: cancelled`.
+There is no bypass flag. Repeat this flow separately for every write.
 
-1. Print the resolved sitemap URL
-2. Ask `apply? [y/N]`
-3. On `y`: run the script
-4. On `n`: skip
+Site commands use `--site X --add-site` or `--site X --delete-site`.
 
 ## What to flag in audits
 

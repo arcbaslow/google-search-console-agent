@@ -71,3 +71,12 @@ Shipped and public. Maintenance mode: bugfixes, Google API version bumps,
 and docs only - the active OSS build slot belongs to capi-kit. Role:
 portfolio proof for the measurement practice; the README should keep a link
 to Good Labs services. New features need an explicit owner decision.
+
+## Direct write confirmation
+
+All four `gsc_admin.py` write functions print the resolved property and,
+for sitemaps, the absolute feedpath to stderr, then ask `Apply? [y/N]`.
+Only `y` proceeds. Refusal, EOF or interruption returns `status: cancelled`
+without resolving credentials or calling the API. There is no bypass flag.
+Keep stdout available for JSON. Show the user the adapter prompt; never
+pipe an automatic answer or chain writes.

@@ -214,3 +214,9 @@ automatically with a 15-minute TTL.
 URL Inspection is the heaviest GSC endpoint: 2,000 calls/day,
 600/minute per property. Use the audit driver for breadth and reserve
 URL inspection for targeted single-URL diagnostics.
+
+## Confirming writes
+
+Direct CLI and Python sitemap/site writes print resolved targets to stderr
+and ask `Apply? [y/N]`. Only `y` executes the request. No answer cancels;
+there is no `--yes` option. Agent users must answer the same prompt.

@@ -43,12 +43,13 @@ python scripts/gsc_admin.py --site <site> --feedpath <url> --delete-sitemap --js
 
 For every write:
 
-1. Print the resolved feedpath URL
-2. Confirm the URL serves a 200 with valid sitemap XML (do an HTTP HEAD
-   if possible) — if it doesn't, refuse and ask the user to fix the
-   sitemap source first
-3. Ask `apply? [y/N]`
-4. Run the command on `y`, skip on `n`
+1. Review the exact property and sitemap URL with the user.
+2. For submission, check that the sitemap is accessible. Deletion may be
+   needed precisely because the sitemap no longer exists.
+3. Invoke the adapter interactively. It prints the resolved targets to
+   stderr and asks `Apply? [y/N]` before every write, including site CRUD.
+4. Let the user answer. Only `y` proceeds; refusal or EOF cancels. Never
+   pipe an automatic answer. JSON stays on stdout.
 
 ## Output Format
 
