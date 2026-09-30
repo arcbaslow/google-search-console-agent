@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Compare sitemap string counts numerically so `"0"` errors no longer produces a false High finding.
+
 - Retain successful audit sections when a worker fails and show unavailable security sources in the action plan.
 
 - Bound SSL Labs polling, display required remote-service notices, preserve source errors and honor `--no-cache` in combined page-experience reports.

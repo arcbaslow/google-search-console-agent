@@ -249,3 +249,5 @@ An unexpected adapter failure is recorded under that source while successful
 workers are retained. Security-source errors appear as unavailable findings.
 The driver still omits URL Inspection. Confidence drops to low for a failed
 search worker; other existing confidence rules are unchanged.
+
+Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.

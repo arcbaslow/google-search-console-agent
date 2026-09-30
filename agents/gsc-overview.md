@@ -93,3 +93,5 @@ Always runs first in `/gsc audit`. As a standalone, useful when:
   raw API view
 
 Unexpected overview failure is retained as an error section by the audit driver; later workers still run. A missing property produces a Critical finding rather than a hard stop.
+
+Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
