@@ -85,3 +85,11 @@ it as a sanity check against Observatory's grade — they usually agree.
 The adapter consumes the POST `/api/v2/scan` result directly, including the
 v2 `id`. It reports HTTP, transport, malformed and scan errors explicitly.
 Do not poll the old `/analyze` endpoint or infer a ranking effect from grades.
+
+## Partial results and terms
+
+Report each source's `error` as unavailable, not a passing grade. A timeout
+has no final grade. Preserve working sources. SSL Labs `info` notices and
+terms are printed before assessment. Only scan authorized hosts; commercial
+use requires Qualys permission. Respect retry hints; do not retry overload
+errors in a tight loop. `--no-cache` starts a new scan once in either mode.

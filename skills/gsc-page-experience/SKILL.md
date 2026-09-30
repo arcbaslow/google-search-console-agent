@@ -77,3 +77,16 @@ Offer:
 
 - "Want to wire this into the full audit? Use `/gsc audit <site>
   --with-page-experience`."
+
+## External-service limits
+
+`--no-cache` applies to SSL Labs in both single and combined modes. A fresh
+scan is started once. Incomplete scans return `error: timeout`; rate-limit
+and overload errors include retry hints instead of an automatic retry.
+Combined reports retain successful sources if another source fails.
+
+SSL Labs runs remotely and displays terms and server messages on stderr.
+Only scan authorized hosts. Commercial API use requires Qualys permission:
+[terms](https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf).
+The polling budget is 120 seconds, with socket timeouts capped to remaining
+budget; this is not a hard wall-clock guarantee for streaming responses.

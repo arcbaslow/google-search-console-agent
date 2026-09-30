@@ -228,3 +228,18 @@ The page-experience adapter uses the synchronous Mozilla Observatory v2
 It makes one POST and does not poll. Results are public, and the service
 returns cached scans within its cooldown. Header grades describe security
 posture and do not prove a ranking effect.
+
+## SSL Labs use and timeouts
+
+SSL Labs requests send the host to Qualys servers. Use only with the site
+owner's permission. Commercial use requires Qualys permission; see the
+[API terms](https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf).
+The adapter displays these terms and `info` messages before assessment.
+
+Polling is scheduled within 120 seconds using a monotonic clock and socket
+timeouts capped to the remaining budget. urllib timeouts are socket-level,
+so a slowly streaming response may exceed the wall-clock budget. Incomplete
+scans return an explicit timeout error, not a grade. 429/503/529 responses
+return retry hints without automatic retries. `--no-cache` starts one fresh
+scan in single or combined mode. A failing source does not discard the
+other results.
