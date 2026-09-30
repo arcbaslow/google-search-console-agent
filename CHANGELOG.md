@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct structured-data field requirements, mark retired and unchecked types, count invalid JSON, and separate failed fetches from markup coverage. Local verdicts no longer claim Google rich-result eligibility.
+
 - Correct all-form-factor CrUX requests, accept 1-40 history periods and emit JSON null for missing p75 values; add direct mocked adapter coverage.
 
 - Derive valid CrUX origins and exact domain-rank targets from URL-prefix properties.

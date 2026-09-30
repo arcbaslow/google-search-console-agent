@@ -2,14 +2,15 @@
 Structured-data adapter.
 
 Parses JSON-LD blocks from a page (or a sample of pages from the
-sitemap) and validates required fields per Schema.org type. The check
-matches what Google's Rich Results Test looks for; the validator runs
-locally so you can scan dozens of URLs without any quota cost.
+sitemap) and checks a limited set of top-level fields. This is not a
+replacement for Google's Rich Results Test: nested, contextual and content
+eligibility requirements are not fully evaluated. No URL Inspection quota
+is used.
 
 GSC's URL Inspection API exposes rich-results status one URL at a time
 (quota-heavy). This adapter complements it by giving you a sitemap-wide
-audit: "of the 800 product pages, 740 have a valid Product schema, 60
-are missing `aggregateRating`, 0 have errors".
+audit of JSON-LD presence and supported field checks. A passing local
+check never guarantees eligibility or appearance in Google Search.
 
 CLI:
   python scripts/gsc_structured_data.py --url https://example.com/products/foo --json
@@ -30,41 +31,43 @@ from typing import Any
 FETCH_TIMEOUT_S = 15
 USER_AGENT = "google-search-console-agent/0.2 (+structured-data)"
 
-# Required field sets per Google rich-results docs. Keys are case-
-# sensitive Schema.org type names. Values are lists of required fields;
-# nested objects use dot notation.
+# Limited top-level requirements, reviewed against Google docs on 2026-09-30.
+# This is not a complete eligibility model; see CONTEXTUAL_TYPES and docs/ROADMAP.md.
 REQUIRED_FIELDS: dict[str, list[str]] = {
-    "Product": ["name", "image"],
-    "Article": ["headline", "image", "datePublished"],
-    "NewsArticle": ["headline", "image", "datePublished"],
-    "BlogPosting": ["headline", "image", "datePublished"],
-    "FAQPage": ["mainEntity"],
-    "Question": ["name", "acceptedAnswer"],
-    "HowTo": ["name", "step"],
-    "Recipe": ["name", "image", "recipeIngredient", "recipeInstructions"],
+    "Product": ["name"],
+    "Article": [],
+    "NewsArticle": [],
+    "BlogPosting": [],
+    "Recipe": ["name", "image"],
     "Event": ["name", "startDate", "location"],
     "BreadcrumbList": ["itemListElement"],
-    "Organization": ["name"],
+    "Organization": [],
     "LocalBusiness": ["name", "address"],
     "VideoObject": ["name", "thumbnailUrl", "uploadDate"],
-    "Course": ["name", "description", "provider"],
-    "JobPosting": ["title", "description", "hiringOrganization", "datePosted",
-                    "jobLocation"],
+    "Course": ["name", "description"],
+    "JobPosting": ["title", "description", "hiringOrganization", "datePosted"],
     "Review": ["author", "reviewRating"],
-    "AggregateRating": ["ratingValue", "ratingCount"],
+    "AggregateRating": ["ratingValue"],
 }
 
-# Fields that strongly improve rich-result eligibility even when not
-# strictly required. Surfaced as "Medium" findings rather than "High".
+# Recommended fields for manual review, not eligibility guarantees.
 RECOMMENDED_FIELDS: dict[str, list[str]] = {
     "Product": ["description", "brand", "offers", "aggregateRating", "review"],
-    "Article": ["author", "publisher", "dateModified"],
-    "NewsArticle": ["author", "publisher", "dateModified"],
-    "BlogPosting": ["author", "publisher", "dateModified"],
-    "Recipe": ["nutrition", "totalTime", "recipeYield"],
+    "Article": ["headline", "image", "datePublished", "author", "dateModified"],
+    "NewsArticle": ["headline", "image", "datePublished", "author", "dateModified"],
+    "BlogPosting": ["headline", "image", "datePublished", "author", "dateModified"],
+    "Recipe": ["recipeIngredient", "recipeInstructions", "nutrition", "totalTime", "recipeYield"],
+    "Organization": ["name", "url", "logo"],
+    "Course": ["provider"],
     "Event": ["endDate", "offers"],
     "JobPosting": ["baseSalary", "employmentType", "validThrough"],
 }
+
+
+# These types have retired Google rich results, not retired Schema.org syntax.
+RETIRED_TYPES = {"FAQPage", "HowTo"}
+# Top-level presence alone cannot establish a useful complete verdict here.
+CONTEXTUAL_TYPES = {"Product", "JobPosting", "Review", "AggregateRating", "BreadcrumbList", "Course"}
 
 
 def _fetch_html(url: str) -> str | None:
@@ -153,8 +156,14 @@ def validate_block(block: dict[str, Any]) -> dict[str, Any]:
         for f in RECOMMENDED_FIELDS.get(t, []):
             if not _has_field(block, f):
                 missing_recommended.append(f"{t}.{f}")
-    if missing_required:
+    unchecked = [t for t in types if t not in REQUIRED_FIELDS and t not in RETIRED_TYPES]
+    retired = [t for t in types if t in RETIRED_TYPES]
+    if types and len(retired) == len(types):
+        verdict = "unsupported"
+    elif missing_required:
         verdict = "fail"
+    elif unchecked or retired or any(t in CONTEXTUAL_TYPES for t in types):
+        verdict = "unchecked"
     elif missing_recommended:
         verdict = "partial"
     elif types:
@@ -166,6 +175,9 @@ def validate_block(block: dict[str, Any]) -> dict[str, Any]:
         "verdict": verdict,
         "missing_required": missing_required,
         "missing_recommended": missing_recommended,
+        "validation_scope": "top_level_presence_only",
+        "unchecked_types": unchecked + [t for t in types if t in CONTEXTUAL_TYPES],
+        "retired_types": retired,
     }
 
 
@@ -254,7 +266,8 @@ def analyze_sitemap_sample(site_url: str, sample_size: int = 20) -> dict[str, An
 def _rollup(per_url: list[dict[str, Any]]) -> dict[str, Any]:
     fetch_failures = sum(1 for x in per_url if x.get("error"))
     has_any = sum(1 for x in per_url if x.get("block_count", 0) > 0)
-    fail = partial = passes = untyped = 0
+    verdict_counts = dict.fromkeys(
+        ("pass", "partial", "fail", "untyped", "invalid", "unchecked", "unsupported"), 0)
     type_counts: dict[str, int] = {}
     missing_required_top: dict[str, int] = {}
     for entry in per_url:
@@ -262,22 +275,16 @@ def _rollup(per_url: list[dict[str, Any]]) -> dict[str, Any]:
             type_counts[t] = type_counts.get(t, 0) + 1
         for b in entry.get("blocks") or []:
             v = b.get("verdict")
-            if v == "pass":
-                passes += 1
-            elif v == "fail":
-                fail += 1
-            elif v == "partial":
-                partial += 1
-            elif v == "untyped":
-                untyped += 1
+            if v in verdict_counts:
+                verdict_counts[v] += 1
             for missing in b.get("missing_required") or []:
                 missing_required_top[missing] = missing_required_top.get(missing, 0) + 1
     return {
-        "urls_analyzed": len(per_url),
+        "urls_analyzed": len(per_url) - fetch_failures,
+        "urls_attempted": len(per_url),
         "urls_with_jsonld": has_any,
         "fetch_failures": fetch_failures,
-        "block_verdicts": {"pass": passes, "partial": partial,
-                            "fail": fail, "untyped": untyped},
+        "block_verdicts": verdict_counts,
         "type_counts": dict(sorted(type_counts.items(), key=lambda kv: -kv[1])),
         "top_missing_required": dict(sorted(missing_required_top.items(),
                                             key=lambda kv: -kv[1])[:10]),

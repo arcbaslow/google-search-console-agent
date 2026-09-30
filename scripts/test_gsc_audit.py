@@ -304,3 +304,13 @@ def test_sitemap_counts_use_numeric_values(monkeypatch, errors, warnings, expect
     else:
         assert output["findings"] == []
     assert overview["sitemap_count"] == 1
+
+
+def test_failed_fetches_do_not_claim_missing_structured_data(monkeypatch):
+    monkeypatch.setattr(gsc_audit.gsc_structured_data, "analyze_sitemap_sample", lambda *a, **kw: {
+        "rollup": {"urls_analyzed": 0, "urls_attempted": 2, "fetch_failures": 2,
+                   "urls_with_jsonld": 0, "block_verdicts": {}},
+    })
+    out = gsc_audit.run_structured_data("example.com")
+    assert any("could not be fetched" in f["title"] for f in out["findings"])
+    assert not any("No JSON-LD" in f["title"] for f in out["findings"])

@@ -2,6 +2,7 @@
 
 
 import gsc_structured_data
+import pytest
 
 # ---------- extract_jsonld ----------
 
@@ -46,7 +47,7 @@ def test_extract_jsonld_handles_invalid_json():
 def test_validate_block_product_pass():
     block = {"@type": "Product", "name": "Foo", "image": "https://x/img"}
     out = gsc_structured_data.validate_block(block)
-    assert out["verdict"] == "partial"  # name+image required pass, but recommended fields missing
+    assert out["verdict"] == "unchecked"  # Product needs a snippet/merchant context.
     assert "Product.brand" in out["missing_recommended"]
 
 
@@ -60,7 +61,7 @@ def test_validate_block_product_full_pass():
     # — empty list returns False, so review is missing. That's fine, recommended.
     out = gsc_structured_data.validate_block(block)
     # Required all present; recommended `review` missing because empty list.
-    assert out["verdict"] == "partial"
+    assert out["verdict"] == "unchecked"
 
 
 def test_validate_block_product_fail_missing_required():
@@ -68,7 +69,7 @@ def test_validate_block_product_fail_missing_required():
     out = gsc_structured_data.validate_block(block)
     assert out["verdict"] == "fail"
     assert "Product.name" in out["missing_required"]
-    assert "Product.image" in out["missing_required"]
+    assert "Product.image" not in out["missing_required"]
 
 
 def test_validate_block_article_pass():
@@ -82,11 +83,10 @@ def test_validate_block_article_pass():
     assert out["verdict"] == "pass"
 
 
-def test_validate_block_unknown_type_is_untyped():
+def test_validate_block_unknown_type_is_unchecked():
     block = {"@type": "WidgetWidget"}
     out = gsc_structured_data.validate_block(block)
-    # No required fields for unknown type → no missing → typed → pass
-    assert out["verdict"] == "pass"
+    assert out["verdict"] == "unchecked"
 
 
 def test_validate_block_no_type_is_untyped():
@@ -156,3 +156,53 @@ def test_analyze_sitemap_sample_rolls_up(monkeypatch):
     assert rollup["urls_analyzed"] == 5
     assert rollup["urls_with_jsonld"] == 5
     assert rollup["type_counts"]["Product"] == 5
+
+
+@pytest.mark.parametrize("schema_type", ["FAQPage", "HowTo"])
+def test_retired_type_is_not_a_pass_or_missing_field_failure(schema_type):
+    result = gsc_structured_data.validate_block({"@type": schema_type})
+    assert result["verdict"] == "unsupported"
+    assert result["missing_required"] == []
+    assert result["retired_types"] == [schema_type]
+
+
+@pytest.mark.parametrize("schema_type", ["Article", "NewsArticle", "BlogPosting", "Organization"])
+def test_recommended_fields_are_not_required(schema_type):
+    result = gsc_structured_data.validate_block({"@type": schema_type})
+    assert result["verdict"] == "partial"
+    assert result["missing_required"] == []
+    assert result["validation_scope"] == "top_level_presence_only"
+
+
+def test_recipe_ingredients_and_instructions_are_recommended():
+    result = gsc_structured_data.validate_block({"@type": "Recipe", "name": "Soup", "image": "x"})
+    assert result["verdict"] == "partial"
+    assert result["missing_required"] == []
+    assert "Recipe.recipeInstructions" in result["missing_recommended"]
+
+
+def test_course_provider_is_recommended_and_list_context_is_unchecked():
+    result = gsc_structured_data.validate_block({"@type": "Course", "name": "X", "description": "Y"})
+    assert result["verdict"] == "unchecked"
+    assert result["missing_required"] == []
+    assert "Course.provider" in result["missing_recommended"]
+
+
+def test_aggregate_rating_review_count_does_not_false_fail():
+    result = gsc_structured_data.validate_block({
+        "@type": "AggregateRating", "ratingValue": 4, "reviewCount": 12,
+    })
+    assert result["missing_required"] == []
+    assert result["verdict"] == "unchecked"  # Needs item/parent context.
+
+
+def test_rollup_preserves_invalid_and_unsupported_and_fetch_failures():
+    result = gsc_structured_data._rollup([
+        {"error": "fetch_failed"},
+        {"block_count": 2, "blocks": [{"verdict": "invalid"}, {"verdict": "unsupported"}]},
+    ])
+    assert result["urls_attempted"] == 2
+    assert result["urls_analyzed"] == 1
+    assert result["fetch_failures"] == 1
+    assert result["block_verdicts"]["invalid"] == 1
+    assert result["block_verdicts"]["unsupported"] == 1
