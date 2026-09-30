@@ -2,7 +2,7 @@
 name: gsc-pagespeed
 description: "PageSpeed Insights / Lighthouse pass for a single URL. Returns lab and field CWV plus Lighthouse SEO, accessibility, best-practices, and performance scores. The right tool for per-page deep-dives. For origin-level field data use gsc-core-web-vitals."
 user-invokable: true
-argument-hint: "<url> [--strategy mobile|desktop] [--categories performance,seo,accessibility,best-practices] [--locale en]"
+argument-hint: "<url> [--strategy mobile|desktop] [--categories performance,seo,accessibility,best-practices] [--locale en] [--raw]"
 license: MIT
 metadata:
   author: arcbaslow
@@ -17,7 +17,7 @@ PSI runs Lighthouse against a URL in real time and returns:
 - **Lighthouse category scores** (0-1): performance, SEO, accessibility, best-practices
 - **Lab metrics**: LCP, CLS, TBT, FCP, Speed Index — measured under PSI's emulated conditions
 - **Field metrics**: same CWV as CrUX, if there's enough data for the URL
-- **The full Lighthouse audit blob** (under `raw` in the JSON output) with every individual audit, opportunity, and diagnostic
+- **The full PSI response** (under `raw` only with `--raw`; Lighthouse is at `raw.lighthouseResult`) with every individual audit, opportunity, and diagnostic
 
 Authentication: the ADC bearer token works directly. No PSI API key is
 required.
@@ -61,3 +61,11 @@ Offer:
 
 - "Want this URL's indexing state? Use `/gsc inspect <site> <url>`."
 - "Want origin-level CWV instead? Use `/gsc cwv <site>`."
+
+## Raw PageSpeed diagnostics
+
+`gsc_psi.py --url https://example.com --raw --json` includes the full PSI
+response under `raw`, with audits at `raw.lighthouseResult.audits`. Default
+output remains compact. The flag changes output only: the existing cache
+already stores the complete response. Review raw URL/page content before
+sharing it. Missing CrUX field data does not imply a passing field result.

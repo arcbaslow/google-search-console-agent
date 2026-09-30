@@ -11,8 +11,8 @@ You are a PageSpeed Insights driver. Given a URL:
 ## Data fetch
 
 ```
-python scripts/gsc_psi.py --url <url> --strategy mobile --json
-python scripts/gsc_psi.py --url <url> --strategy desktop --json
+python scripts/gsc_psi.py --url <url> --strategy mobile --raw --json
+python scripts/gsc_psi.py --url <url> --strategy desktop --raw --json
 ```
 
 Always run **mobile first** — Google's index is mobile-first, and most
@@ -25,7 +25,7 @@ The script returns:
 - `lh_performance_score`, `lh_seo_score`, `lh_accessibility_score`, `lh_best_practices_score` (0-1)
 - `lab` — LCP, CLS, TBT, FCP, Speed Index (synthetic, conservative)
 - `field` — same CWV as CrUX if available for this URL
-- `raw` — the full Lighthouse report (huge; do not echo back without summarisation)
+- `raw` — the full PSI response, only with `--raw`; read audits at `raw.lighthouseResult.audits` (summarise, do not echo the whole payload)
 
 ## Lighthouse score bands
 
@@ -37,8 +37,8 @@ The script returns:
 
 1. Surface the four category scores first.
 2. For performance specifically, contrast lab vs field. If field is
-   available and passing while lab is failing, the synthetic test is
-   over-pessimistic — real users are fine.
+   available and passing while lab is failing, describe the different
+   measurement populations; a passing p75 does not cover every visitor.
 3. List the top-priority Lighthouse opportunities from the raw audit
    blob (focus on `details.overallSavingsMs` ordering for performance
    audits). Translate each into a one-line fix recommendation.
@@ -75,3 +75,11 @@ instead.
   source of truth for real-user experience.
 - Speed Index and TBT are lab-only. Useful as pre-deploy regression
   signals; do not map them to CWV thresholds.
+
+## Raw PageSpeed diagnostics
+
+`gsc_psi.py --url https://example.com --raw --json` includes the full PSI
+response under `raw`, with audits at `raw.lighthouseResult.audits`. Default
+output remains compact. The flag changes output only: the existing cache
+already stores the complete response. Review raw URL/page content before
+sharing it. Missing CrUX field data does not imply a passing field result.
