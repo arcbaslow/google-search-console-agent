@@ -44,7 +44,7 @@ SSL_LABS_URL = "https://api.ssllabs.com/api/v3/analyze"
 DEFAULT_TIMEOUT_S = 15
 OBSERVATORY_POLL_BUDGET_S = 30
 SSL_POLL_BUDGET_S = 120
-POLL_INTERVAL_S = 3
+POLL_INTERVAL_S = 5
 
 USER_AGENT = "google-search-console-agent/0.2 (+page-experience)"
 
@@ -161,6 +161,29 @@ def run_observatory(host: str, poll_budget_s: int = OBSERVATORY_POLL_BUDGET_S) -
 
 # ---------- SSL Labs ----------
 
+def _ssl_json(url: str, deadline: float) -> dict[str, Any]:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        return {"error": "timeout"}
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=min(DEFAULT_TIMEOUT_S, remaining)) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return data if isinstance(data, dict) else {"error": "invalid_response"}
+    except urllib.error.HTTPError as e:
+        out = {"error": f"ssllabs_http_{e.code}"}
+        retry = (e.headers or {}).get("Retry-After")
+        if retry:
+            out["retry_after"] = retry
+        elif e.code in (429, 503, 529):
+            out["retry_after_seconds"] = {429: 60, 503: 900, 529: 1800}[e.code]
+        return out
+    except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+        return {"error": "transport", "message": str(e)}
+    except (ValueError, UnicodeError):
+        return {"error": "invalid_response"}
+
+
 def run_ssl_labs(host: str, poll_budget_s: int = SSL_POLL_BUDGET_S,
                  use_cache: bool = True) -> dict[str, Any]:
     host = _strip_scheme(host)
@@ -172,30 +195,42 @@ def run_ssl_labs(host: str, poll_budget_s: int = SSL_POLL_BUDGET_S,
     if use_cache:
         params["fromCache"] = "on"
         params["maxAge"] = "24"
-    qs = urllib.parse.urlencode(params)
-    url = f"{SSL_LABS_URL}?{qs}"
-
-    deadline = time.time() + poll_budget_s
+    deadline = time.monotonic() + poll_budget_s
     last = None
-    while time.time() < deadline:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-            with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT_S) as resp:
-                last = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            return {"host": host, "error": f"ssllabs_http_{e.code}"}
-        except (urllib.error.URLError, TimeoutError) as e:
-            return {"host": host, "error": "transport", "message": str(e)}
-        status = (last or {}).get("status")
+    if poll_budget_s <= 0:
+        return {"host": host, "error": "timeout"}
+    print(
+        "SSL Labs assesses this host remotely. Use only with the owner's permission. "
+        "Commercial use requires Qualys permission. Terms: "
+        "https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf",
+        file=sys.stderr,
+    )
+    # The integration terms require displaying server notices before assessment.
+    info = _ssl_json(SSL_LABS_URL.rsplit("/", 1)[0] + "/info", deadline)
+    if info.get("error"):
+        return {"host": host, **info}
+    for message in info.get("messages") or []:
+        print(f"SSL Labs notice: {message}", file=sys.stderr)
+    if not use_cache:
+        params["startNew"] = "on"
+    while time.monotonic() < deadline:
+        url = f"{SSL_LABS_URL}?{urllib.parse.urlencode(params)}"
+        last = _ssl_json(url, deadline)
+        params.pop("startNew", None)  # Only initiate once, never on subsequent polls.
+        if last.get("error"):
+            return {"host": host, **last}
+        status = last.get("status")
         if status == "READY":
             break
         if status == "ERROR":
             return {"host": host, "error": "ssllabs_error",
                     "status_message": last.get("statusMessage")}
-        time.sleep(POLL_INTERVAL_S)
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(min(POLL_INTERVAL_S, remaining))
 
-    if not last:
-        return {"host": host, "error": "no_response"}
+    if not last or last.get("status") != "READY":
+        return {"host": host, "error": "timeout", "status": (last or {}).get("status")}
     endpoints = last.get("endpoints") or []
     worst_grade = None
     grade_order = ["A+", "A", "A-", "B", "C", "D", "E", "F", "T", "M"]
@@ -218,13 +253,18 @@ def run_ssl_labs(host: str, poll_budget_s: int = SSL_POLL_BUDGET_S,
 # ---------- Combined ----------
 
 def full_report(host: str, with_observatory: bool = True,
-                with_ssl: bool = True) -> dict[str, Any]:
+                with_ssl: bool = True, use_cache: bool = True) -> dict[str, Any]:
     out: dict[str, Any] = {"host": _strip_scheme(host)}
-    out["headers"] = probe_headers(host)
+    sources = [("headers", lambda: probe_headers(host))]
     if with_observatory:
-        out["observatory"] = run_observatory(host)
+        sources.append(("observatory", lambda: run_observatory(host)))
     if with_ssl:
-        out["ssl_labs"] = run_ssl_labs(host)
+        sources.append(("ssl_labs", lambda: run_ssl_labs(host, use_cache=use_cache)))
+    for name, fetch in sources:
+        try:
+            out[name] = fetch()
+        except Exception as e:
+            out[name] = {"host": out["host"], "error": type(e).__name__, "message": str(e)}
     return out
 
 
@@ -248,7 +288,7 @@ def main():
         elif args.ssl and not (args.headers or args.observatory):
             out = run_ssl_labs(args.host, use_cache=not args.no_cache)
         else:
-            out = full_report(args.host)
+            out = full_report(args.host, use_cache=not args.no_cache)
     except Exception as e:
         print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
         return 1

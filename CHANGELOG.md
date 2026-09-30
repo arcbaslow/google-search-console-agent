@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bound SSL Labs polling, display required remote-service notices, preserve source errors and honor `--no-cache` in combined page-experience reports.
+
 - Use Mozilla Observatory v2 `/scan` and its POST response; report invalid, incomplete and failed scans explicitly.
 
 - Require resolved-target confirmation inside every sitemap and site write adapter; refusal or EOF cancels before authentication or API access.

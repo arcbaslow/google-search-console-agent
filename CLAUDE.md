@@ -86,3 +86,14 @@ pipe an automatic answer or chain writes.
 Page-experience checks use Mozilla Observatory v2 `/scan`: one POST returns
 the result, with no GET polling. Errors or incomplete results are reported
 explicitly. Security-header grades do not establish a ranking effect.
+
+## External security checks
+
+SSL Labs shows terms and remote-assessment notices on stderr, including its
+`info` messages before assessment. Only assess authorized hosts; commercial
+use needs Qualys permission. Polling uses a 120-second scheduling budget and
+remaining-budget socket timeouts; a slow trickle response can exceed that
+wall time. Incomplete scans return `error: timeout`. Overload errors include
+retry hints and are not retried automatically. `--no-cache` also works in
+combined mode, starting a fresh SSL scan once. Other source results survive
+an individual source failure.

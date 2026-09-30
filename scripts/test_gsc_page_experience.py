@@ -154,7 +154,7 @@ def test_run_ssl_labs_polls_until_ready(monkeypatch):
     monkeypatch.setattr(gsc_page_experience.time, "sleep", lambda *_a: None)
     in_progress = _mock_ssl_response(status="IN_PROGRESS", endpoints=[])
     ready = _mock_ssl_response(status="READY")
-    with patch("urllib.request.urlopen", side_effect=[in_progress, ready]):
+    with patch("urllib.request.urlopen", side_effect=[_mock_ssl_response(), in_progress, ready]):
         out = gsc_page_experience.run_ssl_labs("example.com")
     assert out["status"] == "READY"
     assert out["grade"] == "A"
@@ -171,3 +171,90 @@ def test_run_ssl_labs_reports_error_status(monkeypatch):
     with patch("urllib.request.urlopen", return_value=error_resp):
         out = gsc_page_experience.run_ssl_labs("example.com")
     assert out["error"] == "ssllabs_error"
+
+
+def test_ssl_timeout_caps_requests_and_sleep(monkeypatch):
+    now = [0.0]
+    sleeps = []
+    monkeypatch.setattr(gsc_page_experience.time, "monotonic", lambda: now[0])
+
+    def sleep(seconds):
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    monkeypatch.setattr(gsc_page_experience.time, "sleep", sleep)
+    with patch("urllib.request.urlopen", return_value=_mock_ssl_response("IN_PROGRESS")) as fetch:
+        out = gsc_page_experience.run_ssl_labs("example.com", poll_budget_s=2)
+    assert out["error"] == "timeout"
+    assert "grade" not in out
+    assert sleeps == [2]
+    assert fetch.call_count == 2  # info, then one assessment
+    assert all(c.kwargs["timeout"] <= 2 for c in fetch.call_args_list)
+
+
+def test_ssl_notices_precede_assessment_and_start_new_only_once(monkeypatch, capsys):
+    from urllib.parse import parse_qs, urlsplit
+
+    monkeypatch.setattr(gsc_page_experience.time, "sleep", lambda _: None)
+    requests = []
+
+    def fetch(req, timeout):
+        requests.append(req.full_url)
+        if req.full_url.endswith("/info"):
+            resp = _mock_ssl_response()
+            resp.read.return_value = b'{"messages":["maintenance soon"]}'
+            return resp
+        if len(requests) == 2:
+            notice = capsys.readouterr().err
+            assert "maintenance soon" in notice
+            assert "Terms:" in notice
+            return _mock_ssl_response("IN_PROGRESS")
+        return _mock_ssl_response()
+
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    assert gsc_page_experience.run_ssl_labs("example.com", use_cache=False)["status"] == "READY"
+    first, second = [parse_qs(urlsplit(u).query) for u in requests[1:]]
+    assert first["startNew"] == ["on"]
+    assert "startNew" not in second
+    assert "fromCache" not in first
+
+
+@pytest.mark.parametrize("status,wait", [(429, 60), (503, 900), (529, 1800)])
+def test_ssl_overload_returns_hint_without_retry(status, wait):
+    import urllib.error
+
+    error = urllib.error.HTTPError("u", status, "busy", {}, None)
+    with patch("urllib.request.urlopen", side_effect=error) as fetch:
+        out = gsc_page_experience.run_ssl_labs("example.com")
+    assert out["retry_after_seconds"] == wait
+    fetch.assert_called_once()
+
+
+def test_ssl_honors_retry_after_header():
+    import urllib.error
+
+    error = urllib.error.HTTPError("u", 429, "busy", {"Retry-After": "120"}, None)
+    with patch("urllib.request.urlopen", side_effect=error):
+        assert gsc_page_experience.run_ssl_labs("example.com")["retry_after"] == "120"
+
+
+def test_full_report_retains_sources_and_forwards_no_cache(monkeypatch):
+    monkeypatch.setattr(gsc_page_experience, "probe_headers", lambda _: {"grade": "good"})
+    monkeypatch.setattr(gsc_page_experience, "run_observatory",
+                        MagicMock(side_effect=ValueError("invalid JSON")))
+    ssl = MagicMock(return_value={"grade": "A"})
+    monkeypatch.setattr(gsc_page_experience, "run_ssl_labs", ssl)
+    out = gsc_page_experience.full_report("example.com", use_cache=False)
+    assert out["headers"]["grade"] == "good"
+    assert out["observatory"]["error"] == "ValueError"
+    assert out["ssl_labs"]["grade"] == "A"
+    ssl.assert_called_once_with("example.com", use_cache=False)
+
+
+def test_combined_cli_forwards_no_cache(monkeypatch, capsys):
+    report = MagicMock(return_value={"host": "example.com"})
+    monkeypatch.setattr(gsc_page_experience, "full_report", report)
+    monkeypatch.setattr("sys.argv", ["gsc_page_experience", "--host", "example.com", "--no-cache"])
+    assert gsc_page_experience.main() == 0
+    report.assert_called_once_with("example.com", use_cache=False)
+    assert json.loads(capsys.readouterr().out)["host"] == "example.com"
