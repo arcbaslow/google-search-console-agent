@@ -267,3 +267,11 @@ new authentication and response fields; migration requires a separate review.
 See `docs/ROADMAP.md` for endpoint and terms evidence. Tranco data
 has upstream attribution and license conditions; downloaded lists are not
 covered by this repository's MIT license.
+
+## Raw PageSpeed diagnostics
+
+`gsc_psi.py --url https://example.com --raw --json` includes the full PSI
+response under `raw`, with audits at `raw.lighthouseResult.audits`. Default
+output remains compact. The flag changes output only: the existing cache
+already stores the complete response. Review raw URL/page content before
+sharing it. Missing CrUX field data does not imply a passing field result.

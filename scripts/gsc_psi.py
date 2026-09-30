@@ -2,7 +2,7 @@
 PageSpeed Insights wrapper.
 
 PSI returns a Lighthouse audit for a single URL plus the field-measured
-Core Web Vitals (LCP, INP, CLS, FCP, TTFB) if CrUX has enough data for
+Web Vitals (LCP, INP, CLS plus FCP/TTFB diagnostics) if CrUX has enough data for
 that URL. It is the right tool for per-page deep inspection; for
 origin-level CWV history use `gsc_crux.py` instead.
 
@@ -143,6 +143,8 @@ def main():
     parser.add_argument("--locale", default="en")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--raw", action="store_true",
+                        help="Include the complete PSI response under raw")
     args = parser.parse_args()
 
     cats = tuple(c.strip() for c in args.categories.split(",") if c.strip())
@@ -153,7 +155,7 @@ def main():
         print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
         return 1
     # Keep stdout compact unless the user really wants the raw Lighthouse blob
-    out_compact = {k: v for k, v in out.items() if k != "raw"}
+    out_compact = out if args.raw else {k: v for k, v in out.items() if k != "raw"}
     print(json.dumps(out_compact, indent=2, default=str))
     return 0
 

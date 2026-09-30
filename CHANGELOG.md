@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add PSI `--raw` to expose complete Lighthouse diagnostics while keeping default CLI output compact. Add direct mocked request, cache, error and authentication tests.
+
 - Preserve independent Tranco/Open PageRank results on source failure, distinguish unavailable ranks from outside-list ranks, and check both sources in single-domain audits with exact competitor-domain matching. Document the pending Open PageRank migration.
 
 - Honor the Open PageRank key override in comparison mode without mutating the environment, and reject requests over 100 domains instead of silently truncating them.
