@@ -103,3 +103,43 @@ XML/trend fixes, expanded CrUX metrics and report parity as proposals. MCP,
 storage/export, learned CTR references and GA4 integration remain Later.
 Uncertain PSI units/authentication and ambiguous audit policies were left
 unchanged. No bulk inspection or new write surface was added.
+
+## Cache roadmap follow-up — 2026-09-30
+
+Continued on `roadmap-work` from clean `8d6e0b3`, at the owner's request to
+start remaining roadmap tasks. Selected confirmed cache defects before new
+features. This batch does not complete the broader privacy redesign or the
+other Next/Later proposals.
+
+| Check | Start | Final |
+| --- | --- | --- |
+| Ruff | Passed | Passed |
+| Fully mocked pytest suite | 265 passed | 296 passed |
+| Version consistency (0.2.2) | Passed | Passed |
+| sdist/wheel build, without isolation | Passed | Passed |
+| Twine artifact validation | Passed | Passed |
+| Whitespace | Passed | Passed |
+
+Same Windows/Python 3.12.14 environment and workflow checks as the initial
+pass. Checks passed before every commit. The Ubuntu and other Python-version
+matrix was not run locally. No version bump, remote push, PR or publication.
+
+| Commit | Change | Tests |
+| --- | --- | --- |
+| `7639a4b` | Redact mixed encoded identifiers in cached search results | 272 |
+| `08bc3fc` | Replace cache entries atomically and recover malformed data | 280 |
+| `c724f1f` | Invalidate inventory caches after confirmed writes | 296 |
+
+Regression tests reproduced mixed-identifier leaks, corrupt JSON failures,
+interrupted-write data loss, missed empty-list cache hits and stale inventories
+before the corresponding fixes. Tests also cover preserving old data on
+replacement failure, not extending clean cache lifetimes, cancellation and
+API-failure behavior, unrelated-cache preservation, and no repeated remote
+write when local invalidation fails. All files used by tests are synthetic
+and temporary; existing user caches and credentials were not accessed.
+
+Remaining limits: arbitrary encodings and raw adapter payloads are not fully
+anonymized; no historical cache sweep was added; Tranco uses a separate CSV
+cache; in-flight reads across independent processes can still race with
+invalidation. These limits are recorded in ROADMAP.md rather than presented
+as solved by atomic file replacement.
