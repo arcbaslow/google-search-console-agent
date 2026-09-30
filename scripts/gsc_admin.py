@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from urllib.parse import urlsplit
 
 from gsc_auth import get_credentials
 from gsc_utils import cache_get, cache_set, normalize_site_url
@@ -26,6 +27,23 @@ def _get_service(write: bool = False):
 
 
 # ---------- sites ----------
+
+def _confirm_write(action: str, site_url: str, feedpath: str | None = None) -> bool:
+    """Require an explicit answer at the write boundary, before auth or API calls."""
+    if not site_url or site_url == "sc-domain:":
+        raise ValueError("a property is required for writes")
+    if feedpath is not None:
+        parsed = urlsplit(feedpath)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            raise ValueError("feedpath must be an absolute HTTP(S) sitemap URL")
+    print(f"{action}: site {site_url}", file=sys.stderr)
+    if feedpath is not None:
+        print(f"Sitemap URL: {feedpath}", file=sys.stderr)
+    print("Apply? [y/N] ", end="", file=sys.stderr, flush=True)
+    try:
+        return input().strip().lower() == "y"
+    except (EOFError, KeyboardInterrupt):
+        return False
 
 def list_sites():
     cached = cache_get("sites")
@@ -48,15 +66,19 @@ def get_site(site_url: str):
 
 
 def add_site(site_url: str):
-    service = _get_service(write=True)
     site_url = normalize_site_url(site_url)
+    if not _confirm_write("Add site", site_url):
+        return {"status": "cancelled", "site_url": site_url}
+    service = _get_service(write=True)
     service.sites().add(siteUrl=site_url).execute()
     return {"status": "added", "site_url": site_url}
 
 
 def delete_site(site_url: str):
-    service = _get_service(write=True)
     site_url = normalize_site_url(site_url)
+    if not _confirm_write("Delete site", site_url):
+        return {"status": "cancelled", "site_url": site_url}
+    service = _get_service(write=True)
     service.sites().delete(siteUrl=site_url).execute()
     return {"status": "deleted", "site_url": site_url}
 
@@ -83,6 +105,10 @@ def get_sitemap(site_url: str, feedpath: str):
 
 def submit_sitemap(site_url: str, feedpath: str):
     site_url = normalize_site_url(site_url)
+    if not feedpath:
+        raise ValueError("feedpath is required")
+    if not _confirm_write("Submit sitemap", site_url, feedpath):
+        return {"status": "cancelled", "site_url": site_url, "feedpath": feedpath}
     service = _get_service(write=True)
     service.sitemaps().submit(siteUrl=site_url, feedpath=feedpath).execute()
     return {"status": "submitted", "site_url": site_url, "feedpath": feedpath}
@@ -90,6 +116,10 @@ def submit_sitemap(site_url: str, feedpath: str):
 
 def delete_sitemap(site_url: str, feedpath: str):
     site_url = normalize_site_url(site_url)
+    if not feedpath:
+        raise ValueError("feedpath is required")
+    if not _confirm_write("Delete sitemap", site_url, feedpath):
+        return {"status": "cancelled", "site_url": site_url, "feedpath": feedpath}
     service = _get_service(write=True)
     service.sitemaps().delete(siteUrl=site_url, feedpath=feedpath).execute()
     return {"status": "deleted", "site_url": site_url, "feedpath": feedpath}

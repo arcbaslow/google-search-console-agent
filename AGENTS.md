@@ -183,3 +183,12 @@ verdict phrase to the finding line.
   `gsc-core-web-vitals` for users who want both per-URL and origin-
   level data; link `gsc-ctr-curve` to `gsc-search-analytics` for users
   digging into a specific query.
+
+## Direct write confirmation
+
+All four `gsc_admin.py` write functions print the resolved property and,
+for sitemaps, the absolute feedpath to stderr, then ask `Apply? [y/N]`.
+Only `y` proceeds. Refusal, EOF or interruption returns `status: cancelled`
+without resolving credentials or calling the API. There is no bypass flag.
+Keep stdout available for JSON. Show the user the adapter prompt; never
+pipe an automatic answer or chain writes.

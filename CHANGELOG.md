@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Require resolved-target confirmation inside every sitemap and site write adapter; refusal or EOF cancels before authentication or API access.
+
 ## [0.2.2] - 2026-09-08
 
 ### Added

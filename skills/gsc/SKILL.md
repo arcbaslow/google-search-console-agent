@@ -72,7 +72,7 @@ Auth:
 | `inspect <site> <url>` | gsc-url-inspect skill |
 | `cwv <site>` | gsc-core-web-vitals skill |
 | `pagespeed <url>` | gsc-pagespeed skill |
-| `sitemaps <site>` / `submit-sitemap` / `delete-sitemap` | gsc-sitemaps skill |
+| `sitemaps <site>` / `submit-sitemap` / `delete-sitemap` / `add-site` / `delete-site` | gsc-sitemaps skill |
 | `backlinks <domain>` | gsc-backlinks skill |
 | `page-experience <host>` | gsc-page-experience skill |
 | `structured-data <site>` / `<url>` | gsc-structured-data skill |

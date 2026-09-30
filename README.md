@@ -110,7 +110,7 @@ The [router](skills/gsc/SKILL.md) exposes `/gsc audit`, `/gsc queries`, `/gsc cw
 
 Sitemap submission/deletion and site add/delete require the `webmasters` write scope and suitable property permissions. Print the write-scope sign-in command with `python scripts/gsc_auth.py --adc --write`.
 
-The agent instructions require review and confirmation. Direct `gsc_admin.py` write flags execute the API operation without an interactive prompt, so review the exact property and sitemap URL before calling them.
+Every write, including direct Python calls, prints the resolved property and sitemap URL to stderr and asks `Apply? [y/N]`. Only `y` executes it. Refusal or EOF returns a cancelled JSON result. There is no unattended-write bypass.
 
 ### Interpreting the results
 

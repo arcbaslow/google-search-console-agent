@@ -72,3 +72,12 @@ When emitting an analysis finding with a Core Web Vital, include both
 `metric` and `metric_value` keys on the finding object. The markdown
 reporter calls `gsc_benchmarks.compare_cwv()` against Google's
 official thresholds and appends a verdict phrase to the finding line.
+
+## Direct write confirmation
+
+All four `gsc_admin.py` write functions print the resolved property and,
+for sitemaps, the absolute feedpath to stderr, then ask `Apply? [y/N]`.
+Only `y` proceeds. Refusal, EOF or interruption returns `status: cancelled`
+without resolving credentials or calling the API. There is no bypass flag.
+Keep stdout available for JSON. Show the user the adapter prompt; never
+pipe an automatic answer or chain writes.
