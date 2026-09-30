@@ -187,3 +187,12 @@ Cache hits are rechecked and repaired on access without a new API call;
 unchanged entries keep their existing lifetime. This does not sweep old
 cache files or anonymize raw PSI, inspection or other adapter payloads.
 Keep request targets separate from redacted display values.
+
+## JSON cache consistency
+
+Shared JSON cache writes serialize to a temporary file in the cache directory
+and atomically replace the entry after closing it. A failed serialization or
+replacement leaves the previous entry intact. Missing, expired, invalid-JSON
+and invalid-UTF-8 entries are cache misses; permission and write failures
+remain errors. The 15-minute TTL is unchanged. This applies to the shared
+JSON cache, not the separate Tranco CSV cache.

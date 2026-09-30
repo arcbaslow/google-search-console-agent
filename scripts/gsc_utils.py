@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import tempfile
 import time
 import urllib.parse
 from pathlib import Path
@@ -58,22 +60,35 @@ def _cache_key(*parts: Any) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
-def cache_get(*parts: Any) -> dict[str, Any] | None:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+def cache_get(*parts: Any) -> Any:
+    """Read one complete entry; missing, expired or malformed entries miss."""
     path = CACHE_DIR / f"{_cache_key(*parts)}.json"
-    if not path.exists():
+    try:
+        with path.open(encoding="utf-8") as f:
+            # Use the opened file's timestamp, even if another writer replaces it.
+            if time.time() - os.fstat(f.fileno()).st_mtime > CACHE_TTL_SECONDS:
+                return None
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError, UnicodeError):
         return None
-    if time.time() - path.stat().st_mtime > CACHE_TTL_SECONDS:
-        return None
-    with open(path) as f:
-        return json.load(f)
 
 
-def cache_set(value: dict[str, Any], *parts: Any) -> None:
+def cache_set(value: Any, *parts: Any) -> None:
+    """Replace an entry atomically after serializing it in the same directory."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    path = CACHE_DIR / f"{_cache_key(*parts)}.json"
-    with open(path, "w") as f:
-        json.dump(value, f, default=str)
+    key = _cache_key(*parts)
+    path = CACHE_DIR / f"{key}.json"
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=CACHE_DIR,
+                                         prefix=f".{key}.", suffix=".tmp", delete=False) as f:
+            temporary_path = Path(f.name)
+            json.dump(value, f, default=str)
+        # Close first for Windows. Readers see the previous or the complete new entry.
+        os.replace(temporary_path, path)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def scrub_pii(data: Any) -> Any:

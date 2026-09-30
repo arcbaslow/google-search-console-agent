@@ -132,3 +132,73 @@ def test_mixed_literal_and_encoded_identifiers_are_all_redacted(value, expected)
 def test_redaction_preserves_encoding_when_decoding_finds_no_more_identifiers():
     assert gsc_utils.scrub_pii("/hello%20world plain@example.com") == "/hello%20world [email-redacted]"
     assert gsc_utils.scrub_pii("/hello%20world?x=%2Fpath") == "/hello%20world?x=%2Fpath"
+
+@pytest.mark.parametrize("raw", [b'{"rows":', b"\xff\xfeinvalid", b""])
+def test_corrupt_cache_is_a_miss_and_can_be_replaced(tmp_cache_dir, raw):
+    gsc_utils.CACHE_DIR.mkdir(parents=True)
+    path = gsc_utils.CACHE_DIR / f"{gsc_utils._cache_key('broken')}.json"
+    path.write_bytes(raw)
+    assert gsc_utils.cache_get("broken") is None
+    gsc_utils.cache_set({"rows": []}, "broken")
+    assert gsc_utils.cache_get("broken") == {"rows": []}
+
+
+def test_failed_serialization_preserves_previous_cache_and_cleans_temporary_file(monkeypatch):
+    gsc_utils.cache_set({"rows": ["old"]}, "same")
+
+    def interrupted_dump(value, stream, **kwargs):
+        stream.write('{"rows":')
+        raise OSError("simulated interrupted write")
+
+    monkeypatch.setattr(gsc_utils.json, "dump", interrupted_dump)
+    with pytest.raises(OSError, match="interrupted"):
+        gsc_utils.cache_set({"rows": ["new"]}, "same")
+    assert gsc_utils.cache_get("same") == {"rows": ["old"]}
+    assert len(list(gsc_utils.CACHE_DIR.iterdir())) == 1
+
+
+def test_reader_sees_complete_old_value_until_replacement(monkeypatch):
+    import os
+
+    gsc_utils.cache_set({"rows": ["old"]}, "same")
+    original_replace = os.replace
+    observed = []
+
+    def replace_after_read(source, destination):
+        observed.append(gsc_utils.cache_get("same"))
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", replace_after_read)
+    gsc_utils.cache_set({"rows": ["new"]}, "same")
+    assert observed == [{"rows": ["old"]}]
+    assert gsc_utils.cache_get("same") == {"rows": ["new"]}
+    assert len(list(gsc_utils.CACHE_DIR.iterdir())) == 1
+
+
+def test_failed_replacement_preserves_previous_cache(monkeypatch):
+    import os
+    from unittest.mock import MagicMock
+
+    gsc_utils.cache_set({"rows": ["old"]}, "same")
+    monkeypatch.setattr(os, "replace", MagicMock(side_effect=PermissionError("locked target")))
+    with pytest.raises(PermissionError):
+        gsc_utils.cache_set({"rows": ["new"]}, "same")
+    assert gsc_utils.cache_get("same") == {"rows": ["old"]}
+    assert len(list(gsc_utils.CACHE_DIR.iterdir())) == 1
+
+
+def test_expired_cache_remains_a_miss(monkeypatch):
+    import os
+
+    gsc_utils.cache_set({"rows": []}, "expired")
+    path = gsc_utils.CACHE_DIR / f"{gsc_utils._cache_key('expired')}.json"
+    os.utime(path, (1000, 1000))
+    monkeypatch.setattr(gsc_utils.time, "time", lambda: 1000 + gsc_utils.CACHE_TTL_SECONDS + 1)
+    assert gsc_utils.cache_get("expired") is None
+
+
+def test_cache_roundtrip_preserves_unicode_and_empty_list():
+    gsc_utils.cache_set([{"query": "Алматы"}], "unicode")
+    gsc_utils.cache_set([], "empty")
+    assert gsc_utils.cache_get("unicode") == [{"query": "Алматы"}]
+    assert gsc_utils.cache_get("empty") == []
