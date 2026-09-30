@@ -56,7 +56,7 @@ header-failure findings introduced by the combined-source error reporting.
 | Migrate Open PageRank | Adopt current POST bulk API with Bearer auth, domain budgets and new output fields; explicit instructions to obtain a new OPR key. | [Current docs][opr-docs], [free plan][opr], [terms][opr-terms]. Code uses `openpagerank.com/api/v1.0/getPageRank`, `API-OPR` and the old response shape. | 1-2 days | Endpoint/auth/data-model migration. Old endpoint availability and old-key compatibility were not verified. Do not infer shutdown from a documentation redirect or forward keys to a new host. |
 | Context-aware rich results | Product snippet versus merchant-listing profiles; alternative offers/review/rating rules; nested review parents, breadcrumb list items, remote-job conditions, valid field values and graph references. | [Product snippets][product], [reviews][reviews], [jobs][jobs], [breadcrumbs][breadcrumbs]; `gsc_structured_data.py:121-171` only checks presence and the first nested list member. | 4-7 days | Requires a rule model, not a growing flat mandatory-field list. N6 must explicitly disclose this remaining limitation. |
 | Read transport and quota diagnostics | Explicit Google-client timeout, distinguish rate exhaustion from access denial, honor retry hints for eligible read requests, preserve source status and budget information. | `gsc_admin.py:23-25,111`, `gsc_data.py:63-65,108`, PSI/CrUX urllib wrappers; [GSC quotas][gsc-limits], [SSL guidance][ssl-api]. | 2-3 days | No blanket retry of writes or quota-heavy inspection. No persistent quota ledger: other clients share the quota. |
-| Cache privacy and consistency review | Reconcile cache claims with actual payloads; atomic writes, corruption recovery, mutation invalidation, empty-list hits, encoded PII and raw audit data. | `gsc_utils.py:61-78,102-114`: cache_set itself does not scrub; only search query callers scrub; mixed literal/encoded redactions can leave encoded PII. `gsc_admin.py:29-41,67-76` misses cached empty lists and never invalidates after writes. | 2-3 days | Exact URL/cache identity and redacted display data need distinct contracts. Confirmed code gaps; real cached data deliberately not inspected. |
+| Cache privacy and consistency review (partly complete) | Completed: mixed encoded redaction, atomic JSON writes, malformed-entry recovery, empty-list hits and post-write inventory invalidation. Remaining: raw audit/cache privacy and exact-target versus redacted-display contracts. | `gsc_utils.py:61-78,102-114`: cache_set itself does not scrub; only search query callers scrub; mixed literal/encoded redactions can leave encoded PII. `gsc_admin.py:29-41,67-76` misses cached empty lists and never invalidates after writes. | 2-3 days | Exact URL/cache identity and redacted display data need distinct contracts. Confirmed code gaps; real cached data deliberately not inspected. |
 | Sampling and trend validity | Parse sitemap XML namespaces/entities with bounded traversal, preserve prefix semantics, report fetch coverage, handle odd date windows and omitted no-data dates. | `gsc_structured_data.py:191-227`; `gsc_audit.py:207-221`; [query reference][query] omits dates with no data. | 2-3 days | Replacing the parser and defining comparable date windows need a separate patch. No broader crawl or URL-inspection loop. |
 | PSI field units and authentication | Verify CLS scaling with a current primary-source payload/contract; audit ADC quota-project headers and scope compatibility for PSI/CrUX. | `gsc_psi.py:117-120`, `_bearer_token` in both adapters sends only bearer auth; [PSI reference][psi-reference], [CrUX auth/quotas][crux-api]. | 1 day | Suspected CLS unit bug, not proved by current official reference. Third-party examples alone are insufficient. Authenticated verification excluded; leave behavior unchanged pending evidence. |
 | More diagnostic CrUX metrics | Preserve histograms, LCP image subparts/resource types and RTT; label them separately from CWV pass/fail. | [CrUX releases][crux-releases], [API][crux-api]; `gsc_crux.py:136-165` drops everything except five p75 values. | 2 days | Output design and metric availability tests required. |
@@ -239,10 +239,10 @@ for a particular downstream deployment is made.
 
 [inspect-method]: https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect
 
-## Completion record
+## Initial pass completion record
 
-All Now items are implemented. No Next or Later project-shape proposals were
-built. The implementation commits are listed in [verification](VERIFICATION.md).
+All Now items were implemented in the initial pass. No Next or Later
+project-shape proposals were built in that pass. The implementation commits are listed in [verification](VERIFICATION.md).
 
 | Item | Implementation commits |
 | --- | --- |
@@ -257,7 +257,7 @@ built. The implementation commits are listed in [verification](VERIFICATION.md).
 | N9 | `240cb2a`, `cd2132b` |
 | Remaining documentation drift | `7707936` |
 
-Final local checks: Ruff passed; 265 mocked tests passed; version consistency,
+Initial pass final checks: Ruff passed; 265 mocked tests passed; version consistency,
 sdist/wheel build and `twine check` passed. All commits were preceded by these
 checks. This is a Windows/Python 3.12 result, not an Ubuntu matrix result.
 Version remains 0.2.2. No push, PR, tag or publication was performed.
@@ -289,3 +289,22 @@ local-commit constraints continue to apply.
   Cross-process reads already in flight remain outside this cache contract.
 - Broad raw-payload privacy and exact-target/display-data separation remain
   design work. No universal anonymization or historical cache purge is claimed.
+
+Cache follow-up commits:
+
+| Commit | Completed task |
+| --- | --- |
+| `7639a4b` | Redact mixed identifiers and repair accessed Search Analytics cache entries |
+| `08bc3fc` | Replace JSON cache entries atomically and recover malformed reads |
+| `c724f1f` | Reuse empty inventories and invalidate related caches after confirmed successful writes |
+
+Validation: 265 tests at the start, 296 at completion; Ruff, version
+consistency, sdist/wheel build, Twine and whitespace checks passed before
+each commit on Windows/Python 3.12. Tests reproduced the defects before fixes.
+No credentials, existing user cache data, live APIs or remote writes were used.
+The full CI platform matrix remains unverified locally.
+
+This completes the bounded cache bugfix batch. Raw-payload privacy, historical
+cache cleanup, Tranco CSV write consistency and coordination with concurrent
+in-flight reads remain open. Other Next and Later tasks retain their stated
+scope and risks; no new project-shape feature was introduced.
