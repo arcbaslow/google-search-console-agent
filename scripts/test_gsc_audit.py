@@ -3,6 +3,7 @@ runs without an API."""
 
 
 import gsc_audit
+import pytest
 
 
 def test_origin_of_handles_sc_domain():
@@ -208,3 +209,52 @@ def test_run_page_experience_flags_low_observatory(monkeypatch):
     out = gsc_audit.run_page_experience("example.com")
     titles = [f["title"] for f in out["findings"]]
     assert any("Mozilla Observatory grade F" in t for t in titles)
+
+
+@pytest.mark.parametrize("failed,name", [
+    ("run_overview", "gsc-overview"),
+    ("run_search_analytics", "gsc-search-analytics"),
+    ("run_ctr_curve", "gsc-ctr-curve"),
+    ("run_cwv", "gsc-core-web-vitals"),
+    ("run_structured_data", "gsc-structured-data"),
+    ("run_backlinks", "gsc-backlinks"),
+    ("run_page_experience", "gsc-page-experience"),
+])
+def test_orchestrate_preserves_other_workers_when_one_raises(monkeypatch, failed, name):
+    names = {
+        "run_search_analytics": "gsc-search-analytics", "run_ctr_curve": "gsc-ctr-curve",
+        "run_cwv": "gsc-core-web-vitals", "run_structured_data": "gsc-structured-data",
+        "run_backlinks": "gsc-backlinks", "run_page_experience": "gsc-page-experience",
+    }
+    monkeypatch.setattr(gsc_audit, "run_overview", lambda _: (
+        gsc_audit._ok("gsc-overview", "ok"), {"site_url": "sc-domain:example.com"}))
+    for function, agent in names.items():
+        monkeypatch.setattr(gsc_audit, function,
+                            lambda *a, _agent=agent, **kw: gsc_audit._ok(_agent, "retained"))
+
+    def broken(*a, **kw):
+        raise TimeoutError("source timed out")
+
+    monkeypatch.setattr(gsc_audit, failed, broken)
+    output, overview, confidence = gsc_audit.orchestrate(
+        "example.com", with_backlinks=True, with_page_experience=True)
+    assert len(output) == 8
+    assert [a["agent"] for a in output] == ["gsc-overview", *names.values(), "gsc-url-inspect"]
+    failure = next(a for a in output if a["agent"] == name)
+    assert failure["status"] == "error"
+    assert failure["data"]["error"] == "TimeoutError"
+    assert all(a["summary"] == "retained" for a in output
+               if a["agent"] in names.values() and a["agent"] != name)
+    assert overview["site_url"] == "sc-domain:example.com"
+    assert confidence == ("low" if name == "gsc-search-analytics" else "medium")
+
+
+def test_page_experience_errors_are_visible_findings(monkeypatch):
+    monkeypatch.setattr(gsc_audit.gsc_page_experience, "full_report", lambda _: {
+        "headers": {"grade": "good"}, "observatory": {"error": "transport"},
+        "ssl_labs": {"error": "timeout"},
+    })
+    out = gsc_audit.run_page_experience("example.com")
+    assert "headers good" in out["summary"]
+    assert "observatory unavailable" in out["summary"]
+    assert len(out["findings"]) == 2

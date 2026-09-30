@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Retain successful audit sections when a worker fails and show unavailable security sources in the action plan.
+
 - Bound SSL Labs polling, display required remote-service notices, preserve source errors and honor `--no-cache` in combined page-experience reports.
 
 - Use Mozilla Observatory v2 `/scan` and its POST response; report invalid, incomplete and failed scans explicitly.

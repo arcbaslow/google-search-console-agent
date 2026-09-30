@@ -134,9 +134,8 @@ From inside Claude Code:
 /gsc audit example.com
 ```
 
-This goes through the LLM-powered specialist agents and produces a
-richer report. The mechanical driver above is the same shape but
-deterministic, useful in CI or under runtimes without subagent support.
+This invokes the same deterministic driver. Specialist agents can interpret
+individual outputs separately; the audit skill does not delegate them.
 
 ## 8. Inspect benchmarks
 
@@ -243,3 +242,10 @@ scans return an explicit timeout error, not a grade. 429/503/529 responses
 return retry hints without automatic retries. `--no-cache` starts one fresh
 scan in single or combined mode. A failing source does not discard the
 other results.
+
+## Partial audit output
+
+An unexpected adapter failure is recorded under that source while successful
+workers are retained. Security-source errors appear as unavailable findings.
+The driver still omits URL Inspection. Confidence drops to low for a failed
+search worker; other existing confidence rules are unchanged.

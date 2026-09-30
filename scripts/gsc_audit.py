@@ -52,6 +52,13 @@ def _ok(agent, summary, findings=None, data=None):
             "findings": findings or [], "data": data or {}}
 
 
+def _failed(agent, error):
+    return {**_ok(agent, f"{agent} unavailable", [
+        {"severity": "High" if agent == "gsc-search-analytics" else "Medium",
+         "title": f"{agent} failed", "detail": str(error)},
+    ], {"error": type(error).__name__, "message": str(error)}), "status": "error"}
+
+
 def _origin_of(site_url):
     """Convert a GSC site URL or sc-domain entry to a fetchable origin."""
     if site_url.startswith("sc-domain:"):
@@ -524,6 +531,13 @@ def run_page_experience(site_url):
         })
 
     summary_bits = []
+    for source, result in report.items():
+        if isinstance(result, dict) and result.get("error"):
+            findings.append({
+                "severity": "Medium", "title": f"{source} unavailable",
+                "detail": str(result.get("message") or result["error"]),
+            })
+            summary_bits.append(f"{source} unavailable")
     if headers_report.get("grade"):
         summary_bits.append(f"headers {headers_report['grade']}")
     if obs.get("grade"):
@@ -542,7 +556,11 @@ def orchestrate(site_url, days=28, form_factor="ALL_FORM_FACTORS",
                 with_backlinks=False, competitors=None,
                 with_page_experience=False, structured_data_sample=20):
     site_url_norm = normalize_site_url(site_url)
-    overview_agent, overview_data = run_overview(site_url_norm)
+    try:
+        overview_agent, overview_data = run_overview(site_url_norm)
+    except Exception as e:
+        overview_agent = _failed("gsc-overview", e)
+        overview_data = {"site_url": site_url_norm}
 
     agents_output: list[dict[str, Any]] = [overview_agent]
 
@@ -565,9 +583,16 @@ def orchestrate(site_url, days=28, form_factor="ALL_FORM_FACTORS",
         # Collect in a stable order so the report sections are predictable.
         ordered = ["search", "ctr", "cwv", "structured", "backlinks",
                     "page_exp", "url_stub"]
+        agent_names = dict(zip(ordered, [
+            "gsc-search-analytics", "gsc-ctr-curve", "gsc-core-web-vitals",
+            "gsc-structured-data", "gsc-backlinks", "gsc-page-experience", "gsc-url-inspect",
+        ]))
         for key in ordered:
             if key in futures:
-                agents_output.append(futures[key].result())
+                try:
+                    agents_output.append(futures[key].result())
+                except Exception as e:
+                    agents_output.append(_failed(agent_names[key], e))
 
     confidence = "medium"
     sa = next((a for a in agents_output if a["agent"] == "gsc-search-analytics"), None)

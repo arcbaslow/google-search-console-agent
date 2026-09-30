@@ -67,7 +67,14 @@ confidence drops.
 | Scenario | Action |
 |----------|--------|
 | Auth fails | Report and surface the gcloud command via `gsc_auth.py --adc` |
-| Property not in user's GSC list | Hard-fail with a clear message; ask for the right property |
+| Property not in user's GSC list | Continue with a Critical finding; ask for the right property before interpreting private data |
 | CrUX returns no_data | Note "insufficient Chrome traffic at this origin" — common for small or new sites |
 | Sitemap fetch fails | Continue; flag the missing inventory as Medium |
 | 4xx on the homepage probe | Continue; framework / platform fields stay null |
+
+## Source failures
+
+Unexpected worker failures become source-specific error findings while the
+remaining sections are retained. Security-source errors are shown explicitly.
+The driver never bulk-inspects URLs. A failed search worker lowers confidence.
+Other optional-source failures do not change the existing confidence label.
