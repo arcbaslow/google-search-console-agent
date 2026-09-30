@@ -147,10 +147,11 @@ python scripts/gsc_benchmarks.py --compare ctr_position 3.1 --observed 0.048 --i
 ```
 
 CWV thresholds match Google's official Core Web Vitals report bands.
-The CTR-by-position curve is a 2024 composite (FirstPageSage, Backlinko,
-Sistrix) — treat it as directional. Treatments such as AI overviews,
-featured snippets, and image packs distort the curve at the top of the
-SERP.
+FCP and TTFB are diagnostics, listed separately from the three Core Web
+Vitals. The CTR curve is a legacy heuristic with unverified composite
+provenance, not a forecast. Comparisons include `benchmark_basis`. Review
+SERP features, intent, device and brand mix before proposing a rewrite.
+The raw `--ctr-curve` table keeps its existing shape and numeric values.
 
 ## Fallback: BYO OAuth client
 

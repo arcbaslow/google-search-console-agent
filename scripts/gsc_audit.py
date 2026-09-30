@@ -236,9 +236,7 @@ def run_search_analytics(site_url, days=28):
 
 
 def run_ctr_curve(site_url, days=28, max_queries=30):
-    """Compare per-query observed CTR to the position-CTR curve. Highlights
-    underperforming queries (good ranks, weak clickthrough) — usually a
-    title-tag / meta-description issue."""
+    """Compare per-query CTR to the legacy heuristic for manual SERP review."""
     site_url = normalize_site_url(site_url)
     findings: list[dict[str, Any]] = []
     data: dict[str, Any] = {}
@@ -275,11 +273,12 @@ def run_ctr_curve(site_url, days=28, max_queries=30):
         sev = "High" if v["verdict"] == "below_curve_critical" else "Medium"
         findings.append({
             "severity": sev,
-            "title": f"Query `{q.get('query')}` clicks-through below expected curve",
+            "title": f"Query `{q.get('query')}` falls below the legacy CTR heuristic",
             "detail": (
                 f"Position {q.get('position'):.1f}, observed CTR {v['observed_ctr']:.2%}, "
                 f"expected ~{v['expected_ctr']:.2%} (impressions: {q.get('impressions'):,}). "
-                "Usually a title / meta-description fix."
+                "Legacy heuristic with unverified provenance. Review intent, SERP features, "
+                "device and brand mix before considering title or description changes."
             ),
         })
 

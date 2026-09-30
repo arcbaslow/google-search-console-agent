@@ -105,3 +105,18 @@ def test_enrich_findings_skips_unknown_metrics():
     findings = [{"severity": "High", "metric": "made_up", "metric_value": 1.0}]
     out = gsc_benchmarks.enrich_findings(findings)
     assert "benchmark" not in out[0]
+
+@pytest.mark.parametrize("position", [1, 2, 19, 20])
+def test_ctr_exact_positions_match_the_published_local_table(position):
+    assert gsc_benchmarks.expected_ctr_for_position(position) == gsc_benchmarks.CTR_BY_POSITION[position]
+
+
+def test_comparison_discloses_heuristic_basis():
+    assert gsc_benchmarks.compare_ctr(0.1, 2)["benchmark_basis"] == gsc_benchmarks.CTR_BASIS
+    assert gsc_benchmarks.compare_ctr(0.1, 2, impressions=1)["benchmark_basis"] == gsc_benchmarks.CTR_BASIS
+
+
+def test_metric_listing_separates_diagnostics_from_core_web_vitals():
+    out = gsc_benchmarks.list_metrics()
+    assert out["core_web_vitals"] == ["lcp_p75_ms", "inp_p75_ms", "cls_p75"]
+    assert out["diagnostic_metrics"] == ["fcp_p75_ms", "ttfb_p75_ms"]
