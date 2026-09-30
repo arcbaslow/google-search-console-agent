@@ -297,3 +297,16 @@ response under `raw`, with audits at `raw.lighthouseResult.audits`. Default
 output remains compact. The flag changes output only: the existing cache
 already stores the complete response. Review raw URL/page content before
 sharing it. Missing CrUX field data does not imply a passing field result.
+
+## Explicit Search Analytics pages
+
+Use `gsc_data.py --site example.com --queries --rows 100 --start-row 100`
+for one request starting at the zero-based offset. `--start-row` defaults to
+0 and applies to every query mode. The adapter validates nonnegative integer
+offsets and row limits of 1-25,000 before authentication. `--rows` controls
+queries, pages, countries and custom reports; devices, appearance and time
+series retain their existing wrapper limits.
+
+There is no automatic pagination. Search Console returns top rows and does
+not guarantee an exhaustive export; offsets alone do not change that.
+This flag never calls URL Inspection.

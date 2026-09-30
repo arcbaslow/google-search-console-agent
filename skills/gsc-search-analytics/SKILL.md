@@ -2,7 +2,7 @@
 name: gsc-search-analytics
 description: "Top GSC search analytics dimensions: queries, pages, devices, countries, search appearance, time-series. Returns clicks / impressions / CTR / position over a configurable window. Use when user says 'top queries', 'top pages', 'organic traffic', 'why are clicks dropping'."
 user-invokable: true
-argument-hint: "<site> [queries|pages|devices|countries|trends|appearance] [--days N] [--rows N] [--filter 'query CONTAINS pricing'] [--search-type web|image|video|news|discover|googleNews]"
+argument-hint: "<site> [queries|pages|devices|countries|trends|appearance] [--days N] [--rows N] [--start-row N] [--filter 'query CONTAINS pricing'] [--search-type web|image|video|news|discover|googleNews]"
 license: MIT
 metadata:
   author: arcbaslow
@@ -46,9 +46,10 @@ python scripts/gsc_data.py --site X --queries --filter "query CONTAINS 'pricing'
 ## Data state
 
 `--data-state final` (default) is fully aggregated; data lag is ~2 days.
-`--data-state all` includes the most recent partial data — useful for
-real-time monitoring but the last 1-2 days will jump around as the rest
-of the data arrives.
+`--data-state all` permits partial data within the requested window.
+The adapter still ends that window three days back; it does not currently
+expose today's or hourly data. Explicit dates/hourly support is proposed
+in the roadmap.
 
 ## Date ranges
 
@@ -62,3 +63,16 @@ Offer:
 - "Want the CTR-vs-position curve check on these queries? Use `/gsc ctr <site>`."
 - "Want to inspect a specific page? Use `/gsc inspect <site> <url>`."
 - "Want to combine this with Core Web Vitals? Use `/gsc audit <site>`."
+
+## Explicit Search Analytics pages
+
+Use `gsc_data.py --site example.com --queries --rows 100 --start-row 100`
+for one request starting at the zero-based offset. `--start-row` defaults to
+0 and applies to every query mode. The adapter validates nonnegative integer
+offsets and row limits of 1-25,000 before authentication. `--rows` controls
+queries, pages, countries and custom reports; devices, appearance and time
+series retain their existing wrapper limits.
+
+There is no automatic pagination. Search Console returns top rows and does
+not guarantee an exhaustive export; offsets alone do not change that.
+This flag never calls URL Inspection.
