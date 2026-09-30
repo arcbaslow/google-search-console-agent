@@ -118,3 +118,17 @@ def test_cache_set_get_roundtrip(monkeypatch, tmp_path):
 def test_cache_miss_returns_none(monkeypatch, tmp_path):
     monkeypatch.setattr(gsc_utils, "CACHE_DIR", tmp_path / "cache")
     assert gsc_utils.cache_get("never", "set") is None
+
+@pytest.mark.parametrize("value,expected", [
+    ("plain@example.com and encoded%40example.com", "[email-redacted] and [email-redacted]"),
+    ("+1 555 123 4567 and encoded%40example.com", "[phone-redacted] and [email-redacted]"),
+    ("plain@example.com and %2B1%20555%20987%206543", "[email-redacted] and [phone-redacted]"),
+    ("[email-redacted] and encoded%40example.com", "[email-redacted] and [email-redacted]"),
+])
+def test_mixed_literal_and_encoded_identifiers_are_all_redacted(value, expected):
+    assert gsc_utils.scrub_pii(value) == expected
+
+
+def test_redaction_preserves_encoding_when_decoding_finds_no_more_identifiers():
+    assert gsc_utils.scrub_pii("/hello%20world plain@example.com") == "/hello%20world [email-redacted]"
+    assert gsc_utils.scrub_pii("/hello%20world?x=%2Fpath") == "/hello%20world?x=%2Fpath"

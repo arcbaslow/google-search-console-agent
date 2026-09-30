@@ -314,3 +314,12 @@ not guarantee an exhaustive export; offsets alone do not change that.
 This flag never calls URL Inspection.
 
 Each unavailable page-experience source produces one failure finding; a failed header probe is not counted again by the combined error summary.
+
+## Search Analytics redaction
+
+The display/cache scrubber redacts mixed literal and percent-encoded email
+and phone-like identifiers even when a redaction marker is already present.
+Cache hits are rechecked and repaired on access without a new API call;
+unchanged entries keep their existing lifetime. This does not sweep old
+cache files or anonymize raw PSI, inspection or other adapter payloads.
+Keep request targets separate from redacted display values.

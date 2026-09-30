@@ -94,3 +94,12 @@ series retain their existing wrapper limits.
 There is no automatic pagination. Search Console returns top rows and does
 not guarantee an exhaustive export; offsets alone do not change that.
 This flag never calls URL Inspection.
+
+## Search Analytics redaction
+
+The display/cache scrubber redacts mixed literal and percent-encoded email
+and phone-like identifiers even when a redaction marker is already present.
+Cache hits are rechecked and repaired on access without a new API call;
+unchanged entries keep their existing lifetime. This does not sweep old
+cache files or anonymize raw PSI, inspection or other adapter payloads.
+Keep request targets separate from redacted display values.

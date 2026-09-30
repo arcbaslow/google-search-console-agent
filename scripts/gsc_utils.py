@@ -95,13 +95,13 @@ def scrub_pii(data: Any) -> Any:
         s = _redact_phones(s)
         # GSC returns page dimensions percent-encoded, so an address that
         # survives the pass above can still be sitting in the URL as
-        # `john%40gmail.com`. Redact against the decoded form, then keep
-        # whichever version still has something to hide.
+        # `john%40gmail.com`. Preserve encoding unless the decoded pass
+        # finds additional identifiers; existing markers must not hide them.
         decoded = urllib.parse.unquote(s)
         if decoded != s:
-            decoded = _redact_phones(EMAIL_RE.sub("[email-redacted]", decoded))
-            if "redacted]" in decoded and "redacted]" not in s:
-                return decoded
+            redacted = _redact_phones(EMAIL_RE.sub("[email-redacted]", decoded))
+            if redacted != decoded:
+                return redacted
         return s
     return data
 
