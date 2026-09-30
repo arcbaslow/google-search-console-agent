@@ -98,3 +98,11 @@ wall time. Incomplete scans return `error: timeout`. Overload errors include
 retry hints and are not retried automatically. `--no-cache` also works in
 combined mode, starting a fresh SSL scan once. Other source results survive
 an individual source failure.
+
+## Partial audit results
+
+The audit retains successful workers when another raises, recording a
+source-specific error and finding in stable output order. Page-experience
+errors are visible as unavailable sources rather than a clean empty result.
+A failed search worker lowers confidence to `low`; the existing convention
+for other High search findings is unchanged. URL Inspection remains omitted.

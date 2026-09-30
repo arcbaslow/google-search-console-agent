@@ -91,3 +91,5 @@ Always runs first in `/gsc audit`. As a standalone, useful when:
   framework / platform changed
 - A property's sitemap counts look wrong in the UI and you want the
   raw API view
+
+Unexpected overview failure is retained as an error section by the audit driver; later workers still run. A missing property produces a Critical finding rather than a hard stop.

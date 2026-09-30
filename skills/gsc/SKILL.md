@@ -30,7 +30,7 @@ Read commands:
 
 | Command | What it does |
 |---------|-------------|
-| `/gsc audit <site>` | Full audit with parallel agent delegation, benchmarks, markdown output by default |
+| `/gsc audit <site>` | Deterministic parallel adapter audit, benchmarks, markdown output by default |
 | `/gsc queries <site>` | Top queries by clicks/impressions/CTR/position |
 | `/gsc pages <site>` | Top landing pages |
 | `/gsc devices <site>` | Mobile / desktop / tablet split |
