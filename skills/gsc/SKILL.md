@@ -1,6 +1,6 @@
 ---
 name: gsc
-description: "Multi-agent toolkit for Google Search Console. Read side: search analytics (queries / pages / devices / countries / time-series), CTR-vs-position curve checks, sitemap inventory and error counts, URL inspection (indexing state, last crawl, mobile usability, rich results), origin-level Core Web Vitals via CrUX, per-URL PageSpeed Insights / Lighthouse. Write side: submit and delete sitemaps. Triggers on: gsc, search console, organic search, ctr, indexing, sitemap, core web vitals, lcp, inp, cls, lighthouse, pagespeed."
+description: "Multi-agent toolkit for Google Search Console. Read side: search analytics (queries / pages / devices / countries / time-series), CTR-vs-position curve checks, sitemap inventory and error counts, URL inspection (indexing state, last crawl, rich results), origin-level Core Web Vitals via CrUX, per-URL PageSpeed Insights / Lighthouse. Write side: submit and delete sitemaps. Triggers on: gsc, search console, organic search, ctr, indexing, sitemap, core web vitals, lcp, inp, cls, lighthouse, pagespeed."
 user-invokable: true
 argument-hint: "[command] [site-or-url] [options]"
 license: MIT

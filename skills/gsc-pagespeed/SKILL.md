@@ -19,8 +19,9 @@ PSI runs Lighthouse against a URL in real time and returns:
 - **Field metrics**: same CWV as CrUX, if there's enough data for the URL
 - **The full PSI response** (under `raw` only with `--raw`; Lighthouse is at `raw.lighthouseResult`) with every individual audit, opportunity, and diagnostic
 
-Authentication: the ADC bearer token works directly. No PSI API key is
-required.
+The adapter sends an ADC bearer token and has no API-key flag. Project
+enablement, quota attribution and scope compatibility need verification;
+see the authentication review in docs/ROADMAP.md.
 
 ## Direct commands
 

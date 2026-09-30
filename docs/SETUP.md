@@ -96,8 +96,10 @@ python scripts/gsc_auth.py --adc          # read scope
 python scripts/gsc_auth.py --adc --write  # write scope
 ```
 
-The same ADC token works against PageSpeed Insights and the Chrome UX
-Report API — no separate API keys.
+PSI and CrUX adapters currently send a bearer token from the same credential
+resolver. They have no API-key flag. Project enablement, quota attribution
+and scope compatibility were not verified live; see the authentication
+review in docs/ROADMAP.md before assuming a GSC login covers both services.
 
 ## 5. Confirm property ownership
 

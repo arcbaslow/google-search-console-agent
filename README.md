@@ -93,6 +93,10 @@ python scripts/gsc_crux.py --origin https://example.com --form-factor PHONE --js
 python scripts/gsc_psi.py --url https://example.com/pricing --strategy mobile --json
 ```
 
+Use `gsc_data.py --start-row N` for one explicit Search Analytics page and
+`gsc_psi.py --raw` to include complete Lighthouse diagnostics. Neither flag
+adds an automatic fetch loop.
+
 For optional domain and page-experience checks:
 
 ```bash
@@ -161,3 +165,9 @@ Maintained by [Good Labs](https://goodlabs.kz) — measurement implementation, t
 ## License
 
 [MIT](LICENSE) © Dilshat Rakhimov. This is an independent project; it is not an official product of the platform vendors.
+
+## Roadmap
+
+See the [evidence-backed roadmap](docs/ROADMAP.md) for the scoped maintenance
+pass, API and service research, deferred proposals and verification limits.
+Local results are recorded in [verification](docs/VERIFICATION.md).

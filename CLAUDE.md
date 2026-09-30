@@ -36,8 +36,9 @@ bypass.
 
 ## Auth
 
-Default path is gcloud Application Default Credentials. The same
-token works against GSC, PSI, and CrUX:
+Default path is gcloud Application Default Credentials. PSI and CrUX reuse
+the resolver, but project enablement, quota attribution and scope compatibility
+remain unverified live; see AGENTS.md and docs/ROADMAP.md.
 
 ```
 python scripts/gsc_auth.py --check

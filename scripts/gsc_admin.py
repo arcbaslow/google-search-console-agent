@@ -128,7 +128,7 @@ def delete_sitemap(site_url: str, feedpath: str):
 # ---------- URL inspection ----------
 
 def inspect_url(site_url: str, url: str, lang: str | None = None):
-    """One URL → indexing status, last crawl, mobile usability, rich results,
+    """One URL → indexing status, last crawl, rich results,
     page fetch state. Slow and quota-heavy; do not bulk-call."""
     site_url = normalize_site_url(site_url)
     cached = cache_get("inspect", site_url, url, lang)
