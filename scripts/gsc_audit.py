@@ -147,8 +147,8 @@ def run_overview(site_url):
             recent = max(sitemaps, key=lambda s: s.get("lastSubmitted") or "")
             overview["last_sitemap_submitted"] = recent.get("lastSubmitted")
             for sm in sitemaps:
-                errors = sm.get("errors") or 0
-                warnings = sm.get("warnings") or 0
+                errors = int(sm.get("errors") or 0)
+                warnings = int(sm.get("warnings") or 0)
                 if errors:
                     findings.append({
                         "severity": "High",

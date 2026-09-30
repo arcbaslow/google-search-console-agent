@@ -258,3 +258,23 @@ def test_page_experience_errors_are_visible_findings(monkeypatch):
     assert "headers good" in out["summary"]
     assert "observatory unavailable" in out["summary"]
     assert len(out["findings"]) == 2
+
+
+@pytest.mark.parametrize("errors,warnings,expected", [
+    ("0", "0", None), ("0", "3", "3 warnings"), ("2", "0", "2 errors"),
+    (0, 0, None), (None, None, None),
+])
+def test_sitemap_counts_use_numeric_values(monkeypatch, errors, warnings, expected):
+    monkeypatch.setattr(gsc_audit.gsc_admin, "list_sites", lambda: [
+        {"site_url": "sc-domain:example.com"},
+    ])
+    monkeypatch.setattr(gsc_audit.gsc_admin, "list_sitemaps", lambda _: [
+        {"path": "https://example.com/sitemap.xml", "errors": errors, "warnings": warnings},
+    ])
+    monkeypatch.setattr(gsc_audit, "_probe_homepage", lambda _: {"status": 200})
+    output, overview = gsc_audit.run_overview("example.com")
+    if expected:
+        assert expected in output["findings"][0]["title"]
+    else:
+        assert output["findings"] == []
+    assert overview["sitemap_count"] == 1

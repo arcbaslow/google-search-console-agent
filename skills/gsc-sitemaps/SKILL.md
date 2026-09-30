@@ -52,3 +52,5 @@ The submit endpoint only takes the sitemap URL — it does not push
 sitemap content. Make sure your CDN actually serves a 200 response
 for the sitemap URL before submitting; the API does not validate it
 for you.
+
+Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.

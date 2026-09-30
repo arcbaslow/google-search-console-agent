@@ -73,3 +73,5 @@ For every write:
 - A sitemap submission triggers a re-discovery, not a re-index.
   Pages that were previously deindexed for content reasons won't
   come back just because the sitemap was resubmitted.
+
+Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
