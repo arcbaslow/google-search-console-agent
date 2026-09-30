@@ -1,6 +1,6 @@
 ---
 name: gsc-ctr-curve
-description: "Compare per-query observed CTR to the position-based CTR curve. Surfaces queries with weak click-through for their average rank — almost always a title or meta-description fix. Triggers: 'low ctr', 'why is ctr low', 'title tag', 'meta description optimization'."
+description: "Compare per-query observed CTR to the position-based CTR curve. Surfaces queries with weak click-through for their average rank — a candidate for intent and SERP review. Triggers: 'low ctr', 'why is ctr low', 'title tag', 'meta description optimization'."
 user-invokable: true
 argument-hint: "<site> [--days N] [--max-queries N]"
 license: MIT
@@ -14,13 +14,12 @@ metadata:
 
 For each query in the top set, compare observed CTR to the
 position-CTR curve baked into `scripts/gsc_benchmarks.py`. The curve
-is a 2024 composite (FirstPageSage, Backlinko, Sistrix) and treats
-positions 1-20.
+is a legacy heuristic for positions 1-20 with unverified composite
+provenance. Published studies differ; see [the roadmap](../../docs/ROADMAP.md).
+It is not a current population estimate or a forecast of extra clicks.
 
-A query that ranks well but clicks-through poorly is usually a title
-tag / meta-description problem (or a SERP feature like an AI overview
-eating the click). The skill highlights the worst offenders so the
-user knows exactly which pages to rewrite.
+Review intent, brand/device mix and SERP features before proposing a title
+or description change. `benchmark_basis` discloses the heuristic in results.
 
 ## Process
 
@@ -44,10 +43,10 @@ Run it standalone when you want only the CTR diagnosis.
 
 | Verdict | Meaning |
 |---------|---------|
-| `above_curve` | Observed CTR ≥ 120% of expected — title / SERP feature is winning attention |
-| `on_curve` | Observed CTR within ±15% of expected — no action needed |
-| `below_curve` | Observed CTR 65-85% of expected — moderate title / meta fix |
-| `below_curve_critical` | Observed CTR ≤ 65% of expected — high-leverage rewrite candidate |
+| `above_curve` | Observed CTR ≥ 120% of the heuristic |
+| `on_curve` | Observed CTR > 85% and < 120% of the heuristic |
+| `below_curve` | Observed CTR > 65% and ≤ 85% of the heuristic — review candidate |
+| `below_curve_critical` | Observed CTR ≤ 65% of the heuristic — review candidate |
 | `low_volume` | Below 50 impressions — small-sample noise; skipped from action plan |
 
 ## Caveats

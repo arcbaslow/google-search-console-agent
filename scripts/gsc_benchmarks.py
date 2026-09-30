@@ -7,10 +7,10 @@ Two benchmark sources are bundled:
      Console documentation. These are the same numbers GSC uses to
      classify URLs as Good / Needs Improvement / Poor.
 
-  2. Average organic CTR by SERP position. Composite from public studies
-     (FirstPageSage 2024, Backlinko 2023, Sistrix 2024). Position-1 CTR
-     varies sharply by SERP layout (featured snippet, AI overview, image
-     pack), so treat these as directional.
+  2. Legacy organic CTR heuristic by SERP position. The original composite
+     attribution has no reproducible derivation. Published studies differ
+     by sample and SERP layout; these numbers are not current population
+     estimates or a forecast. See docs/ROADMAP.md for source comparisons.
 
 CLI:
   python scripts/gsc_benchmarks.py --list
@@ -26,8 +26,8 @@ import json
 import sys
 from typing import Any
 
-# CWV thresholds — official Google buckets. Lower is better. Numbers are
-# the p75 of a 28-day window across real visits.
+# Google p75 thresholds, reviewed 2026-09-30. Lower is better.
+# Only LCP, INP and CLS are Core Web Vitals; FCP and TTFB are diagnostics.
 CWV_THRESHOLDS: dict[str, dict[str, float]] = {
     "lcp_p75_ms":  {"good": 2500,  "needs_improvement": 4000},  # Largest Contentful Paint
     "inp_p75_ms":  {"good": 200,   "needs_improvement": 500},   # Interaction to Next Paint
@@ -41,8 +41,9 @@ LIGHTHOUSE_SCORE_BANDS = {
     "needs_improvement": 0.50,
 }
 
-# Organic CTR by position, mobile + desktop combined, 2024 composite.
-# Values are 0-1 fractions.
+# Legacy heuristic. Composite provenance and sample population are unverified.
+# Values are 0-1 fractions, retained for compatibility, not fresh research.
+CTR_BASIS = "legacy_heuristic_unverified_provenance"
 CTR_BY_POSITION: dict[int, float] = {
     1: 0.395,
     2: 0.187,
@@ -69,7 +70,9 @@ CTR_BY_POSITION: dict[int, float] = {
 
 def list_metrics() -> dict[str, Any]:
     return {
-        "core_web_vitals": list(CWV_THRESHOLDS.keys()),
+        "core_web_vitals": ["lcp_p75_ms", "inp_p75_ms", "cls_p75"],
+        "diagnostic_metrics": ["fcp_p75_ms", "ttfb_p75_ms"],
+        "ctr_basis": CTR_BASIS,
         "lighthouse_scores": ["lh_performance_score", "lh_seo_score",
                               "lh_accessibility_score", "lh_best_practices_score"],
         "ctr_curve_positions": sorted(CTR_BY_POSITION.keys()),
@@ -116,7 +119,7 @@ def expected_ctr_for_position(position: float) -> float | None:
         return None
     if position < 1:
         return CTR_BY_POSITION[1]
-    if position >= 20:
+    if position > 20:
         return 0.004
     lo = int(position)
     hi = lo + 1
@@ -141,6 +144,7 @@ def compare_ctr(observed_ctr: float, average_position: float,
             "verdict": "low_volume",
             "observed_ctr": observed_ctr,
             "expected_ctr": expected,
+            "benchmark_basis": CTR_BASIS,
             "position": average_position,
             "impressions": impressions,
         }
@@ -160,6 +164,7 @@ def compare_ctr(observed_ctr: float, average_position: float,
         "verdict": verdict,
         "observed_ctr": observed_ctr,
         "expected_ctr": expected,
+        "benchmark_basis": CTR_BASIS,
         "position": average_position,
         "delta_pct": round(delta * 100, 2),
         "ratio": round(ratio, 3) if ratio is not None else None,
@@ -198,7 +203,8 @@ def main():
         return 0
     if args.ctr_for_position is not None:
         print(json.dumps({"position": args.ctr_for_position,
-                          "expected_ctr": expected_ctr_for_position(args.ctr_for_position)},
+                          "expected_ctr": expected_ctr_for_position(args.ctr_for_position),
+                          "benchmark_basis": CTR_BASIS},
                          indent=2))
         return 0
     if args.compare:

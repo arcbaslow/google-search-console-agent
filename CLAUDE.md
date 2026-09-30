@@ -126,3 +126,11 @@ Organization have no universal required fields. Rollups count invalid JSON
 and report fetch failures separately from successfully analyzed pages. Do not
 infer missing markup from failed fetches or recommend retired rich results.
 See `skills/gsc-structured-data/SKILL.md` for the full verdict vocabulary.
+
+## Benchmark interpretation
+
+The position-CTR table is a legacy heuristic with unverified composite
+provenance. Comparisons disclose `benchmark_basis`; position 20 uses the
+table's 0.5% value. Do not promise recoverable clicks or infer a title defect
+from the curve alone. LCP, INP and CLS are Core Web Vitals; `--list` separates
+FCP and TTFB into `diagnostic_metrics`. Threshold values are unchanged.
