@@ -280,7 +280,9 @@ local-commit constraints continue to apply.
 - Mixed literal/encoded redaction: implemented, including repair of accessed
   Search Analytics cache hits without an API call. Regression tests reproduced
   four mixed-string leaks and the cached-result leak before the fix.
-- Atomic cache writes and corruption recovery: next in this batch.
+- Atomic JSON cache writes and malformed-entry recovery: implemented with
+  interrupted-write and replacement-failure regression tests. Permission
+  failures remain errors; the separate Tranco CSV cache is not covered.
 - Empty-list hits and invalidation after confirmed successful writes: next.
 - Broad raw-payload privacy and exact-target/display-data separation remain
   design work. No universal anonymization or historical cache purge is claimed.

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Write shared JSON cache entries atomically, preserve the previous entry on write failure, and treat malformed JSON or invalid UTF-8 entries as cache misses.
+
 - Redact mixed literal and percent-encoded identifiers in Search Analytics output, and repair affected cached results on access without another API request.
 
 - Avoid counting a failed header probe twice in the combined page-experience action plan.
