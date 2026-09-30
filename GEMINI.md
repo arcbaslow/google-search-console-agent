@@ -135,3 +135,10 @@ provenance. Comparisons disclose `benchmark_basis`; position 20 uses the
 table's 0.5% value. Do not promise recoverable clicks or infer a title defect
 from the curve alone. LCP, INP and CLS are Core Web Vitals; `--list` separates
 FCP and TTFB into `diagnostic_metrics`. Threshold values are unchanged.
+
+## Domain request limits
+
+`gsc_backlinks.py --api-key` applies to both `--domain` and `--compare`,
+without changing the environment. Open PageRank requests above 100 domains
+return `too_many_domains` before sending; the adapter never silently drops
+domains or automatically batches requests. Tranco can still provide rows.

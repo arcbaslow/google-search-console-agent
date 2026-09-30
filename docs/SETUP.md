@@ -268,3 +268,10 @@ Google eligibility. `urls_analyzed` counts successful fetches; compare that
 with `urls_attempted` and `fetch_failures` before interpreting coverage.
 Invalid JSON remains visible in the block verdict rollup. See the
 [structured-data skill](../skills/gsc-structured-data/SKILL.md).
+
+## Domain request limits
+
+`gsc_backlinks.py --api-key` applies to both `--domain` and `--compare`,
+without changing the environment. Open PageRank requests above 100 domains
+return `too_many_domains` before sending; the adapter never silently drops
+domains or automatically batches requests. Tranco can still provide rows.

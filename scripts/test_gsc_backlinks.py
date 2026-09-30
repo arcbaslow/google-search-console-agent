@@ -128,3 +128,30 @@ def test_compare_domains_orders_rows(monkeypatch, tmp_path):
     assert len(out["rows"]) == 2
     assert out["rows"][0]["tranco_rank"] == 1
     assert out["rows"][1]["tranco_rank"] == 50
+
+def test_open_pagerank_rejects_oversize_request_without_sending(monkeypatch):
+    opener = MagicMock(side_effect=AssertionError("must not send a truncated request"))
+    monkeypatch.setattr(gsc_backlinks.urllib.request, "urlopen", opener)
+    out = gsc_backlinks.query_open_pagerank([f"site{i}.example" for i in range(101)], api_key="test-key")
+    assert out["error"] == "too_many_domains"
+    opener.assert_not_called()
+
+
+def test_cli_key_override_reaches_comparison_without_mutating_environment(monkeypatch, capsys):
+    monkeypatch.setenv("OPENPAGERANK_API_KEY", "environment-key")
+    query = MagicMock(return_value={"results": {}})
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", query)
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda domain: None)
+    monkeypatch.setattr("sys.argv", ["gsc_backlinks.py", "--compare", "a.example,b.example", "--api-key", "override-key"])
+    assert gsc_backlinks.main() == 0
+    query.assert_called_once_with(["a.example", "b.example"], api_key="override-key")
+    assert gsc_backlinks.os.environ["OPENPAGERANK_API_KEY"] == "environment-key"
+    assert len(json.loads(capsys.readouterr().out)["rows"]) == 2
+
+
+def test_single_domain_key_override_reaches_query(monkeypatch):
+    query = MagicMock(return_value={"results": {}})
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", query)
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda domain: None)
+    gsc_backlinks.domain_authority("a.example", api_key="override-key")
+    query.assert_called_once_with(["a.example"], api_key="override-key")

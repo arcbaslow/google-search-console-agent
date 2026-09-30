@@ -76,3 +76,10 @@ Offer:
   --with-backlinks --competitors a.com,b.com`."
 
 For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
+
+## Domain request limits
+
+`gsc_backlinks.py --api-key` applies to both `--domain` and `--compare`,
+without changing the environment. Open PageRank requests above 100 domains
+return `too_many_domains` before sending; the adapter never silently drops
+domains or automatically batches requests. Tranco can still provide rows.
