@@ -10,16 +10,15 @@ Three free signals are bundled:
 
   2. Mozilla HTTP Observatory — A+ to F grade based on a wider set of
      header / cookie / TLS rules. Public endpoint, no API key.
-     Asynchronous: the first call may queue a scan; the script polls
-     until the report is FINISHED or a 30-second budget is exhausted.
+     A synchronous POST returns a completed or cached scan.
 
   3. SSL Labs — A+ to F TLS grade including cipher suite, certificate,
      protocol-version, and known-vulnerability checks. Public endpoint,
      no API key. Polls up to 120 seconds. Cached results are used when
      available via `fromCache=on`.
 
-All three feed Google's "Page Experience" signals — HTTPS quality and
-header hygiene directly affect ranking even when CWV is fine.
+These describe security posture. Header grades do not establish a ranking
+impact or replace Core Web Vitals measurements.
 
 CLI:
   python scripts/gsc_page_experience.py --host example.com --json
@@ -39,7 +38,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-MOZILLA_OBSERVATORY_URL = "https://observatory-api.mdn.mozilla.net/api/v2/analyze"
+MOZILLA_OBSERVATORY_URL = "https://observatory-api.mdn.mozilla.net/api/v2/scan"
 SSL_LABS_URL = "https://api.ssllabs.com/api/v3/analyze"
 
 DEFAULT_TIMEOUT_S = 15
@@ -125,50 +124,38 @@ def probe_headers(host: str) -> dict[str, Any]:
 
 def run_observatory(host: str, poll_budget_s: int = OBSERVATORY_POLL_BUDGET_S) -> dict[str, Any]:
     host = _strip_scheme(host)
-    # POST kicks off (or returns cached); GET retrieves.
-    qs = urllib.parse.urlencode({"host": host})
-    post_url = f"{MOZILLA_OBSERVATORY_URL}?{qs}"
+    # v2 returns the completed scan in the POST response; there is no GET poll.
+    if poll_budget_s <= 0:
+        return {"host": host, "error": "timeout"}
+    url = f"{MOZILLA_OBSERVATORY_URL}?{urllib.parse.urlencode({'host': host})}"
+    req = urllib.request.Request(
+        url, method="POST", data=b"",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+    )
     try:
-        urllib.request.urlopen(urllib.request.Request(
-            post_url, method="POST",
-            headers={"User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"},
-            data=b"",
-        ), timeout=DEFAULT_TIMEOUT_S)
+        with urllib.request.urlopen(req, timeout=min(DEFAULT_TIMEOUT_S, poll_budget_s)) as resp:
+            scan = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
-        # The v2 endpoint sometimes returns 4xx on POST if a cached scan exists;
-        # GET still works, so continue.
-        if e.code not in (400, 404, 409):
-            return {"host": host, "error": f"observatory_http_{e.code}"}
+        return {"host": host, "error": f"observatory_http_{e.code}"}
     except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
         return {"host": host, "error": "transport", "message": str(e)}
-
-    deadline = time.time() + poll_budget_s
-    last = None
-    while time.time() < deadline:
-        try:
-            req = urllib.request.Request(post_url, headers={"User-Agent": USER_AGENT})
-            with urllib.request.urlopen(req, timeout=DEFAULT_TIMEOUT_S) as resp:
-                last = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            return {"host": host, "error": f"observatory_http_{e.code}"}
-        except (urllib.error.URLError, TimeoutError) as e:
-            return {"host": host, "error": "transport", "message": str(e)}
-        state = (last or {}).get("state") or (last or {}).get("status")
-        if state in ("FINISHED", "completed", "FAILED") or last.get("grade") is not None:
-            break
-        time.sleep(POLL_INTERVAL_S)
-
-    if not last:
-        return {"host": host, "error": "no_response"}
+    except (ValueError, UnicodeError):
+        return {"host": host, "error": "invalid_response"}
+    if not isinstance(scan, dict):
+        return {"host": host, "error": "invalid_response"}
+    if scan.get("error"):
+        return {"host": host, "error": "observatory_scan_failed", "message": str(scan["error"])}
+    if scan.get("grade") is None:
+        return {"host": host, "error": "incomplete_response"}
     return {
         "host": host,
-        "grade": last.get("grade"),
-        "score": last.get("score"),
-        "tests_passed": last.get("tests_passed"),
-        "tests_failed": last.get("tests_failed"),
-        "tests_quantity": last.get("tests_quantity"),
-        "scan_id": last.get("scan_id") or last.get("id"),
-        "state": last.get("state") or last.get("status"),
+        "grade": scan.get("grade"),
+        "score": scan.get("score"),
+        "tests_passed": scan.get("tests_passed"),
+        "tests_failed": scan.get("tests_failed"),
+        "tests_quantity": scan.get("tests_quantity"),
+        "scan_id": scan.get("id"),
+        "state": "FINISHED",
     }
 
 

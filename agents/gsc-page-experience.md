@@ -79,3 +79,9 @@ it as a sanity check against Observatory's grade — they usually agree.
   rest of the audit shouldn't stall on it.
 - Mozilla Observatory's API was rebranded; if it's down or moved, the
   script reports a clean error and the SSL/headers checks still run.
+
+## Observatory v2
+
+The adapter consumes the POST `/api/v2/scan` result directly, including the
+v2 `id`. It reports HTTP, transport, malformed and scan errors explicitly.
+Do not poll the old `/analyze` endpoint or infer a ranking effect from grades.
