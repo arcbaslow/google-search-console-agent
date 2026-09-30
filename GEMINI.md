@@ -57,9 +57,9 @@ confirmation.
 
 ## Auth
 
-The default auth path is gcloud Application Default Credentials. The
-same token works against the GSC, PageSpeed Insights, and Chrome UX
-Report APIs:
+The default auth path is gcloud Application Default Credentials. PSI and
+CrUX reuse the resolver, but project enablement, quota attribution and scope
+compatibility remain unverified live; see AGENTS.md and docs/ROADMAP.md.
 
 ```
 python scripts/gsc_auth.py --adc            # prints the gcloud command

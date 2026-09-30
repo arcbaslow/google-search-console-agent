@@ -32,8 +32,10 @@ sitemap CRUD) and tell the user to run that gcloud command. Write
 features (sitemap submit/delete, site add/delete) need the
 `webmasters` scope without the `.readonly` suffix.
 
-The same ADC token works against PageSpeed Insights and the Chrome UX
-Report API — no separate API keys.
+PSI and CrUX adapters currently send a bearer token from the same credential
+resolver. They have no API-key flag. Project enablement, quota attribution
+and scope compatibility were not verified live; see the authentication
+review in docs/ROADMAP.md before assuming a GSC login covers both services.
 
 ## Universal CLI
 
@@ -64,7 +66,7 @@ Every feature is a Python CLI. Same flags across runtimes.
 
 | Command | Purpose |
 |---------|---------|
-| `python scripts/gsc_admin.py --site X --url https://X/foo --inspect --json` | One URL: indexing state, last crawl, rich results, canonical, mobile usability |
+| `python scripts/gsc_admin.py --site X --url https://X/foo --inspect --json` | One URL: indexing state, last crawl, rich results, canonical |
 
 URL inspection is quota-heavy (2,000/day, 600/min per property). Use
 sparingly; do not bulk-iterate.
@@ -75,7 +77,7 @@ sparingly; do not bulk-iterate.
 |---------|---------|
 | `python scripts/gsc_crux.py --origin https://X --json` | Origin-level CrUX snapshot |
 | `python scripts/gsc_crux.py --origin https://X --form-factor PHONE --json` | Phone-only |
-| `python scripts/gsc_crux.py --origin https://X --history --json` | 25-week weekly history |
+| `python scripts/gsc_crux.py --origin https://X --history --json` | 25 weekly overlapping 28-day periods by default |
 | `python scripts/gsc_crux.py --url https://X/foo --json` | Single-URL field data |
 | `python scripts/gsc_psi.py --url https://X/foo --strategy mobile --json` | Per-URL Lighthouse (lab + field + scores) |
 
@@ -107,7 +109,7 @@ Open PageRank uses the legacy GET API with `OPENPAGERANK_API_KEY`. Current upstr
 | `python scripts/gsc_page_experience.py --host example.com --observatory --json` | Mozilla Observatory only |
 | `python scripts/gsc_page_experience.py --host example.com --ssl --json` | SSL Labs only |
 
-No API keys required. SSL Labs scans can take 60-120s; cached results return instantly.
+No API keys are used for these probes. SSL Labs polls within a 120-second scheduling budget; upstream latency and overload can prevent a completed result.
 
 ### Structured data (JSON-LD)
 
@@ -116,7 +118,7 @@ No API keys required. SSL Labs scans can take 60-120s; cached results return ins
 | `python scripts/gsc_structured_data.py --url https://X/foo --json` | Single-URL deep dive |
 | `python scripts/gsc_structured_data.py --site example.com --sample 25 --json` | Sitemap-wide audit (25 URLs sampled) |
 
-All local. Returns per-block verdicts (`pass` / `partial` / `fail` / `untyped` / `invalid`) plus a rollup of the most-commonly-missing required fields across the sample.
+Fetches remote HTML and parses JSON-LD locally. Returns `pass`, `partial`, `fail`, `untyped`, `invalid`, `unchecked` or `unsupported`, plus missing-field and fetch-coverage rollups. These are limited field checks, not rich-result eligibility decisions.
 
 ### Benchmarks
 
@@ -133,7 +135,7 @@ All local. Returns per-block verdicts (`pass` / `partial` / `fail` / `untyped` /
 |---------|---------|
 | `python scripts/gsc_audit.py --site X --output audit.md` | One-command full audit, markdown |
 | `python scripts/gsc_audit.py --site X --with-backlinks --competitors a.com,b.com --output audit.md` | Same plus competitor comparison |
-| `python scripts/gsc_audit.py --site X --with-page-experience --output audit.md` | Same plus Observatory + SSL Labs (slow, polls external services) |
+| `python scripts/gsc_audit.py --site X --with-page-experience --output audit.md` | Same plus Observatory + SSL Labs (slow; SSL Labs polls) |
 | `python scripts/gsc_audit.py --site X --format html --output audit.html` | HTML version |
 | `python scripts/gsc_audit.py --site X --format pdf --output audit.pdf` | PDF via WeasyPrint |
 | `python scripts/gsc_report.py --site X --inputs a.json,b.json --format md --output audit.md` | Render from pre-collected agent outputs |

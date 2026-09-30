@@ -6,8 +6,8 @@ Web Vitals (LCP, INP, CLS plus FCP/TTFB diagnostics) if CrUX has enough data for
 that URL. It is the right tool for per-page deep inspection; for
 origin-level CWV history use `gsc_crux.py` instead.
 
-Authentication: the GA-ADC bearer token works directly. No API key is
-required.
+Authentication: sends a bearer token from the shared credential resolver.
+Live scope/quota-project compatibility remains unverified; see docs/ROADMAP.md.
 
 CLI:
   python scripts/gsc_psi.py --url https://example.com --strategy mobile --json

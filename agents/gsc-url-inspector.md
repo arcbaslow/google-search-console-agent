@@ -1,6 +1,6 @@
 ---
 name: gsc-url-inspector
-description: GSC URL Inspection driver. Pulls indexing state, last crawl, mobile usability, rich results, and canonical resolution for a single URL. Quota-heavy; do not bulk-call.
+description: GSC URL Inspection driver. Pulls indexing state, last crawl, rich results, and canonical resolution for a single URL. Quota-heavy; do not bulk-call.
 model: sonnet
 maxTurns: 10
 tools: Read, Bash, Write
@@ -23,21 +23,14 @@ The URL must belong to the property prefix or domain.
 
 - `PASS` → URL is indexed
 - `FAIL` → URL not indexed; surface the exact reason from `indexStatusResult.verdict` + `coverageState`
-- `NEUTRAL` / `PARTIAL` → mixed signals; usually means rich results
-  partially failed
+- `NEUTRAL` means excluded; `PARTIAL` is reserved and no longer used
 
-### Coverage state explanations
+### Coverage and fetch states
 
-| State | What it usually means |
-|-------|------------------------|
-| `INDEXING_ALLOWED` | OK |
-| `BLOCKED_BY_ROBOTS_TXT` | robots.txt is blocking; fix `Disallow:` |
-| `BLOCKED_BY_NOINDEX` | meta robots / X-Robots-Tag noindex |
-| `CRAWLED_CURRENTLY_NOT_INDEXED` | Google saw it but chose not to index — usually thin content or near-duplicate |
-| `DISCOVERED_CURRENTLY_NOT_INDEXED` | Google knows the URL but hasn't crawled — usually crawl budget |
-| `URL_BLOCKED_BY_ROBOTS_TXT` | same as above, different phrasing |
-| `BLOCKED_DUE_TO_UNAUTHORIZED_REQUEST` | 401/403 — auth in front of the page |
-| `BLOCKED_DUE_TO_OTHER_ISSUE` | network / DNS / timeout |
+Keep `coverageState` text separate from the enum-valued `indexingState`,
+`robotsTxtState` and `pageFetchState`. Quote the returned values with their
+field names; do not invent coverage enums or infer a content-quality cause
+from an exclusion alone. The API reports the indexed version, not a live test.
 
 ### Canonical
 
@@ -46,16 +39,9 @@ The URL must belong to the property prefix or domain.
 
 ### Rich results
 
-- For each rich-results item, surface the verdict (PASS / FAIL / NEUTRAL)
-  and any item-level issues. Most rich-result issues are missing
-  required fields in the structured-data block.
-
-### Mobile usability
-
-- Surface the verdict and the issue list. Common ones:
-  `MOBILE_USABILITY_ISSUE_CONTENT_WIDER_THAN_SCREEN`,
-  `MOBILE_USABILITY_ISSUE_TEXT_TOO_SMALL_TO_READ`,
-  `MOBILE_USABILITY_ISSUE_CLICKABLE_ELEMENTS_TOO_CLOSE_TOGETHER`.
+- Surface `richResultsResult.verdict` and each detected item's issues.
+  Items have names and issues, not individual verdict fields. Missing
+  rich-result data does not establish a successful local validation.
 
 ## Output Format
 
@@ -65,7 +51,7 @@ The URL must belong to the property prefix or domain.
   "summary": "URL <url>: indexing PASS / FAIL; canonical match yes/no; rich results N items",
   "findings": [
     {"severity": "Critical", "title": "URL not indexed",
-     "detail": "Coverage state BLOCKED_BY_NOINDEX. Remove the noindex header or meta tag."}
+     "detail": "indexingState is BLOCKED_BY_META_TAG. Review whether noindex is intentional before changing it."}
   ],
   "data": { ... raw inspect response ... }
 }
@@ -74,5 +60,12 @@ The URL must belong to the property prefix or domain.
 ## Quota
 
 URL inspection is the most quota-heavy GSC endpoint (2,000/day, 600/min
-per property). Inspect at most 5-10 URLs per session. For wider audits
+per property). Inspect one explicitly requested URL per call; never bulk-iterate. For wider audits
 use `/gsc audit` (which intentionally skips inspection).
+
+## Inspection reference limits
+
+`mobileUsabilityResult` is deprecated; do not promise current mobile-usability
+issues. See the [response reference](https://developers.google.com/webmaster-tools/v1/urlInspection.index/UrlInspectionResult).
+The [inspect method](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect)
+reports the indexed version, not a live-URL test. Missing fields remain unknown.

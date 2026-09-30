@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Align inspection guidance with the current response fields and deprecations, and document actual authentication and cache-privacy limits.
+
 - Add Search Analytics `--start-row` for a single explicit result page, with local offset and row-limit validation. No automatic pagination or URL Inspection calls are added.
 
 - Add PSI `--raw` to expose complete Lighthouse diagnostics while keeping default CLI output compact. Add direct mocked request, cache, error and authentication tests.

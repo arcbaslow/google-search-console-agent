@@ -1,6 +1,6 @@
 ---
 name: gsc-url-inspect
-description: "Per-URL inspection via GSC's URL Inspection API. Indexing state, last crawl, mobile usability, rich results coverage, page fetch state, canonical resolution. Quota-heavy — one URL per call. Use when user says 'is this URL indexed', 'why isn't this page indexed', 'rich results status'."
+description: "Per-URL inspection via GSC's URL Inspection API. Indexing state, last crawl, rich results coverage, page fetch state, canonical resolution. Quota-heavy — one URL per call. Use when user says 'is this URL indexed', 'why isn't this page indexed', 'rich results status'."
 user-invokable: true
 argument-hint: "<site> <url> [--lang en-US]"
 license: MIT
@@ -12,16 +12,14 @@ metadata:
 
 # GSC: URL Inspection
 
-`urlInspection.index.inspect` is the API equivalent of pasting a URL
-into Search Console's URL Inspection tool. It returns:
+`urlInspection.index.inspect` returns Google's indexed-version analysis.
+It does not perform the UI's live-URL test. The response includes:
 
-- **Coverage** — index state (e.g. `INDEXING_ALLOWED`,
-  `BLOCKED_BY_ROBOTS_TXT`, `BLOCKED_BY_NOINDEX`)
+- **Coverage** — `coverageState` text and separate indexing/fetch/robots states
 - **Crawl** — last crawl time, page fetch state, robots.txt state
 - **Indexability** — verdict (`PASS`, `FAIL`, `NEUTRAL`)
 - **Canonical** — user-declared vs Google-selected canonical
-- **Rich results** — declared structured-data types and their per-item verdicts
-- **Mobile usability** — verdict + issues
+- **Rich results** — result-level verdict, detected types and item issues
 - **AMP** — declared and indexed AMP URL state (legacy)
 
 ## Direct command
@@ -46,7 +44,6 @@ diagnostics, not bulk scans.
 - A specific URL isn't ranking and you want to know why
 - A new page launched and you need to confirm Google has crawled it
 - Rich results disappeared and you want the per-item verdicts
-- Mobile usability dropped and you want the specific issue list
 
 ## After analysis
 
@@ -54,3 +51,10 @@ Offer:
 
 - "Want a Lighthouse pass for the same URL? Use `/gsc pagespeed <url>`."
 - "Want the origin-level CWV trend? Use `/gsc cwv <site>`."
+
+## Inspection reference limits
+
+`mobileUsabilityResult` is deprecated; do not promise current mobile-usability
+issues. See the [response reference](https://developers.google.com/webmaster-tools/v1/urlInspection.index/UrlInspectionResult).
+The [inspect method](https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect)
+reports the indexed version, not a live-URL test. Missing fields remain unknown.

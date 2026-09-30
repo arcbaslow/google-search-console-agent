@@ -41,10 +41,17 @@ Please do not file public issues for security problems.
 - Open PageRank API key:
   `OPENPAGERANK_API_KEY` env var only — never persisted on disk
 
-The toolkit never logs credentials to stdout, never sends them to a
-third party, and never bakes them into report files. Cached API
-responses under `~/.claude/gsc-cache/` are scrubbed of PII (emails,
-phone numbers, ID-like keys) before being written.
+Google credentials are used by the Google adapters. The optional Open
+PageRank key is intentionally sent to its configured API endpoint; it is
+not a Google credential. Do not include tokens or keys in reports.
+
+Search Analytics applies the best-effort `scrub_pii` filter before caching.
+The shared cache writer does not scrub payloads itself. URL Inspection,
+PSI (including raw diagnostics), CrUX and admin responses can contain URLs
+or other identifying data. The regex/denylist filter is not comprehensive
+anonymization; mixed literal and encoded identifiers need further review.
+Treat caches under `~/.claude/gsc-cache/` and raw reports as private data.
+See docs/ROADMAP.md for the pending cache privacy and consistency work.
 
 ## Disclosure timeline
 
