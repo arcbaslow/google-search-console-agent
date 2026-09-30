@@ -314,3 +314,25 @@ def test_failed_fetches_do_not_claim_missing_structured_data(monkeypatch):
     out = gsc_audit.run_structured_data("example.com")
     assert any("could not be fetched" in f["title"] for f in out["findings"])
     assert not any("No JSON-LD" in f["title"] for f in out["findings"])
+
+def test_backlink_audit_uses_both_sources_without_competitors(monkeypatch):
+    from unittest.mock import MagicMock
+
+    query = MagicMock(return_value={"rows": [
+        {"domain": "example.com", "tranco_band": "unavailable", "tranco_error": "timeout",
+         "open_pagerank_decimal": 4.2},
+    ]})
+    monkeypatch.setattr(gsc_audit.gsc_backlinks, "compare_domains", query)
+    out = gsc_audit.run_backlinks("example.com")
+    query.assert_called_once_with(["example.com"])
+    assert "Open PageRank 4.2" in out["summary"]
+    assert any(f["title"] == "Tranco unavailable" for f in out["findings"])
+
+
+def test_competitor_rank_does_not_match_a_domain_suffix(monkeypatch):
+    monkeypatch.setattr(gsc_audit.gsc_backlinks, "compare_domains", lambda domains: {"rows": [
+        {"domain": "notexample.com", "tranco_rank": 10},
+        {"domain": "example.com", "tranco_rank": 20},
+    ]})
+    out = gsc_audit.run_backlinks("example.com", ["notexample.com"])
+    assert any("#2 of 2" in f["title"] for f in out["findings"])

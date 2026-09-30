@@ -155,3 +155,33 @@ def test_single_domain_key_override_reaches_query(monkeypatch):
     monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda domain: None)
     gsc_backlinks.domain_authority("a.example", api_key="override-key")
     query.assert_called_once_with(["a.example"], api_key="override-key")
+
+def test_tranco_failure_preserves_open_pagerank_in_both_modes(monkeypatch):
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", MagicMock(side_effect=TimeoutError("slow source")))
+    query = MagicMock(return_value={"results": {"a.example": {"page_rank_decimal": 4.2}}})
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", query)
+    single = gsc_backlinks.domain_authority("a.example")
+    assert single["tranco_band"] == "unavailable"
+    assert single["tranco_error"] == "TimeoutError"
+    assert single["open_pagerank"]["page_rank_decimal"] == 4.2
+    compared = gsc_backlinks.compare_domains(["a.example", "b.example"])
+    assert compared["rows"][0]["open_pagerank_decimal"] == 4.2
+    assert all(row["tranco_band"] == "unavailable" for row in compared["rows"])
+
+
+def test_unexpected_open_pagerank_failure_preserves_tranco(monkeypatch):
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", MagicMock(side_effect=ValueError("bad JSON")))
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda domain: 10)
+    for out in [gsc_backlinks.domain_authority("a.example"), gsc_backlinks.compare_domains(["a.example"])]:
+        assert out["open_pagerank_error"] == "ValueError"
+        row = out.get("rows", [out])[0]
+        assert row["tranco_rank"] == 10
+        assert row["tranco_band"] == "top_1k"
+
+
+def test_missing_tranco_domain_is_not_a_source_failure(monkeypatch):
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda domain: None)
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", lambda *a, **kw: {"error": "no_api_key"})
+    row = gsc_backlinks.compare_domains(["a.example"])["rows"][0]
+    assert row["tranco_band"] == "outside_top_1m"
+    assert "tranco_error" not in row

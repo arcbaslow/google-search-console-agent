@@ -275,3 +275,17 @@ Invalid JSON remains visible in the block verdict rollup. See the
 without changing the environment. Open PageRank requests above 100 domains
 return `too_many_domains` before sending; the adapter never silently drops
 domains or automatically batches requests. Tranco can still provide rows.
+
+## Independent domain sources
+
+A Tranco failure returns `tranco_band: unavailable` and `tranco_error`,
+not `outside_top_1m`. Open PageRank results remain available, and Tranco
+results remain available if Open PageRank fails. The audit checks both
+sources even without competitors, reports unavailable sources, and matches
+the primary domain exactly when comparing ranks.
+
+This branch retains the legacy Open PageRank endpoint. Current docs describe
+new authentication and response fields; migration requires a separate review.
+See [the roadmap](ROADMAP.md) for endpoint and terms evidence. Tranco data
+has upstream attribution and license conditions; downloaded lists are not
+covered by this repository's MIT license.
