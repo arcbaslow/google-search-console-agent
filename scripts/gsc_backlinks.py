@@ -3,13 +3,13 @@ Backlinks / domain-authority adapter.
 
 Two free data sources are bundled:
 
-  1. Open PageRank (Domcop) — domain rank on a 0-10 PR-style scale,
-     derived from Common Crawl. Optional: set OPENPAGERANK_API_KEY in
-     the environment. Free signup at https://www.domcop.com/openpagerank/.
-     1,000 requests/day; up to 100 domains per request.
+  1. Open PageRank — optional legacy GET integration, up to 100 domains
+     per request. Set OPENPAGERANK_API_KEY only for a compatible legacy key.
+     Current upstream docs describe a different endpoint/auth contract;
+     migration and legacy availability remain unverified. See docs/ROADMAP.md.
 
-  2. Tranco top-1M list — a research-grade combined ranking that
-     averages Cisco Umbrella, Majestic, Alexa (historic), and others.
+  2. Tranco top-1M list — a combined popularity ranking using Umbrella,
+     Majestic, Farsight, CrUX and Cloudflare inputs.
      No API key. Downloaded once and cached locally under
      `~/.claude/gsc-cache/tranco.csv`. Refreshes weekly.
 
@@ -66,8 +66,9 @@ def query_open_pagerank(domains: list[str], api_key: str | None = None) -> dict:
         return {
             "error": "no_api_key",
             "hint": (
-                "Set OPENPAGERANK_API_KEY. Free signup at "
-                "https://www.domcop.com/openpagerank/ — 1,000 requests/day."
+                "Set OPENPAGERANK_API_KEY for a compatible legacy key. Current docs: "
+                "https://openpagerank.keywordseverywhere.com/docs . "
+                "This adapter still uses the legacy API; new-key compatibility is unverified."
             ),
         }
     if not domains:
@@ -179,20 +180,35 @@ def tranco_rank(domain: str) -> int | None:
 
 # ---------- High-level helpers ----------
 
+def _tranco_rows(domains: list[str]) -> list[dict]:
+    try:
+        ranks = {d: tranco_rank(d) for d in domains}
+    except Exception as e:
+        return [{"domain": d, "tranco_rank": None, "tranco_band": "unavailable",
+                 "tranco_error": type(e).__name__, "tranco_message": str(e)} for d in domains]
+    return [{"domain": d, "tranco_rank": ranks[d],
+             "tranco_band": _tranco_band(ranks[d])} for d in domains]
+
+
+def _open_pagerank_result(domains: list[str], api_key: str | None) -> dict:
+    try:
+        return query_open_pagerank(domains, api_key=api_key)
+    except Exception as e:
+        return {"error": type(e).__name__, "message": str(e)}
+
+
 def domain_authority(domain: str, api_key: str | None = None) -> dict:
     """Single-domain lookup that combines both data sources."""
     domain = _strip_scheme(domain)
-    out: dict = {"domain": domain}
-    out["tranco_rank"] = tranco_rank(domain)
-    out["tranco_band"] = _tranco_band(out["tranco_rank"])
-    opr = query_open_pagerank([domain], api_key=api_key)
+    out = _tranco_rows([domain])[0]
+    opr = _open_pagerank_result([domain], api_key)
     if "error" not in opr:
         result = opr["results"].get(domain) or {}
         out["open_pagerank"] = result
         out["open_pagerank_rate_limit"] = opr.get("rate_limit")
     else:
         out["open_pagerank_error"] = opr["error"]
-        out["open_pagerank_hint"] = opr.get("hint")
+        out["open_pagerank_hint"] = opr.get("hint") or opr.get("message")
     return out
 
 
@@ -200,26 +216,20 @@ def compare_domains(domains: list[str], api_key: str | None = None) -> dict:
     """Compare a list of domains. The first entry is treated as the
     "primary" (your site); the rest are competitors."""
     domains = [_strip_scheme(d) for d in domains]
-    out: dict = {"primary": domains[0] if domains else None, "rows": []}
+    out: dict = {"primary": domains[0] if domains else None, "rows": _tranco_rows(domains)}
 
-    opr = query_open_pagerank(domains, api_key=api_key)
+    opr = _open_pagerank_result(domains, api_key)
     opr_results = opr.get("results", {}) if "error" not in opr else {}
     if "error" in opr:
         out["open_pagerank_error"] = opr["error"]
-        out["open_pagerank_hint"] = opr.get("hint")
+        out["open_pagerank_hint"] = opr.get("hint") or opr.get("message")
 
-    for d in domains:
-        row = {
-            "domain": d,
-            "tranco_rank": tranco_rank(d),
-        }
-        row["tranco_band"] = _tranco_band(row["tranco_rank"])
-        opr_row = opr_results.get(d)
+    for row in out["rows"]:
+        opr_row = opr_results.get(row["domain"])
         if opr_row:
             row["open_pagerank_decimal"] = opr_row.get("page_rank_decimal")
             row["open_pagerank_integer"] = opr_row.get("page_rank_integer")
             row["open_pagerank_rank"] = opr_row.get("rank")
-        out["rows"].append(row)
 
     return out
 

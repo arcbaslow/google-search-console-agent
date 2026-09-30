@@ -17,10 +17,11 @@ the hole with two free sources that, combined, answer the question
 audits keep asking: "how authoritative is this site vs the competitors
 we care about?"
 
-- **Open PageRank** (Domcop) — free signup at
-  [openpagerank.com](https://www.domcop.com/openpagerank/). 1,000
-  requests / day, 100 domains / request. Stored in environment as
-  `OPENPAGERANK_API_KEY`.
+- **Open PageRank** — optional legacy GET integration using
+  `OPENPAGERANK_API_KEY`, at most 100 domains/request. Current
+  [upstream documentation](https://openpagerank.keywordseverywhere.com/docs)
+  describes a different API. Legacy availability and new-key compatibility
+  are unverified; do not send new keys to the legacy host without review.
 - **Tranco top-1M** — no key, no signup. Downloaded once and cached
   locally; refreshed weekly. Tells you whether the domain is in the
   global top 1k / 10k / 100k / 1M, which is a coarse but honest
@@ -45,17 +46,14 @@ we care about?"
 ## Setup
 
 ```
-# Free signup; takes ~1 minute
-open https://www.domcop.com/openpagerank/
-
-# Add the key to your shell init
+# Only use a compatible legacy key; current API migration is pending
 export OPENPAGERANK_API_KEY="opr_xxxxxxxxxxxxxxxxxxxx"
 
 python scripts/gsc_backlinks.py --domain example.com --json
 ```
 
 Tranco works without any key — first run downloads the top-1M CSV
-once (about 25 MB compressed), then lookups are instant.
+once, then lookups use the local cache. Download failures are reported separately.
 
 ## Caveats
 
@@ -83,3 +81,17 @@ For URL-prefix properties, the audit derives CrUX origins from scheme and author
 without changing the environment. Open PageRank requests above 100 domains
 return `too_many_domains` before sending; the adapter never silently drops
 domains or automatically batches requests. Tranco can still provide rows.
+
+## Independent domain sources
+
+A Tranco failure returns `tranco_band: unavailable` and `tranco_error`,
+not `outside_top_1m`. Open PageRank results remain available, and Tranco
+results remain available if Open PageRank fails. The audit checks both
+sources even without competitors, reports unavailable sources, and matches
+the primary domain exactly when comparing ranks.
+
+This branch retains the legacy Open PageRank endpoint. Current docs describe
+new authentication and response fields; migration requires a separate review.
+See [the roadmap](../../docs/ROADMAP.md) for endpoint and terms evidence. Tranco data
+has upstream attribution and license conditions; downloaded lists are not
+covered by this repository's MIT license.

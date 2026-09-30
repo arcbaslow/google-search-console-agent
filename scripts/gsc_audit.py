@@ -440,13 +440,19 @@ def run_backlinks(site_url, competitors=None):
     findings: list[dict[str, Any]] = []
 
     domains = [bare_domain] + (competitors or [])
-    out = gsc_backlinks.compare_domains(domains) if competitors else \
-        {"rows": [_single_row(bare_domain)], "primary": bare_domain}
+    out = gsc_backlinks.compare_domains(domains)
 
     primary_row = next((r for r in out.get("rows") or [] if r["domain"] == bare_domain), None)
     if not primary_row:
         return _ok("gsc-backlinks", "could not look up domain rank", [], out)
 
+    for source, error, message in (
+        ("Tranco", primary_row.get("tranco_error"), primary_row.get("tranco_message")),
+        ("Open PageRank", out.get("open_pagerank_error"), out.get("open_pagerank_hint")),
+    ):
+        if error:
+            findings.append({"severity": "Low", "title": f"{source} unavailable",
+                             "detail": message or str(error)})
     band = primary_row.get("tranco_band")
     opr_dec = primary_row.get("open_pagerank_decimal")
     if opr_dec is not None and opr_dec < 2.0:
@@ -463,7 +469,7 @@ def run_backlinks(site_url, competitors=None):
         ranked = [r for r in out["rows"] if r.get("tranco_rank") is not None]
         ranked.sort(key=lambda r: r["tranco_rank"])
         position = next((i for i, r in enumerate(ranked, 1)
-                          if r["domain"].endswith(bare_domain)), None)
+                          if r["domain"] == bare_domain), None)
         if position and position > 1 and len(ranked) > 1:
             findings.append({
                 "severity": "Medium",
@@ -478,12 +484,6 @@ def run_backlinks(site_url, competitors=None):
     if opr_dec is not None:
         summary += f", Open PageRank {opr_dec:.1f}"
     return _ok("gsc-backlinks", summary, findings, out)
-
-
-def _single_row(domain):
-    rank = gsc_backlinks.tranco_rank(domain)
-    return {"domain": domain, "tranco_rank": rank,
-            "tranco_band": gsc_backlinks._tranco_band(rank)}
 
 
 def run_page_experience(site_url):
