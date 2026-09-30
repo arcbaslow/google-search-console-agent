@@ -4,6 +4,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import gsc_page_experience
+import pytest
 
 # ---------- helpers ----------
 
@@ -76,7 +77,7 @@ def _mock_observatory_response(state="FINISHED", grade="A+", score=120):
         "tests_passed": 10,
         "tests_failed": 1,
         "tests_quantity": 11,
-        "scan_id": 42,
+        "id": 42,
     }).encode("utf-8")
     resp.__enter__ = lambda s: s
     resp.__exit__ = lambda *a: False
@@ -84,23 +85,43 @@ def _mock_observatory_response(state="FINISHED", grade="A+", score=120):
 
 
 def test_run_observatory_returns_grade(monkeypatch):
-    """First POST succeeds, GET returns FINISHED on first poll."""
+    """The v2 POST response is the result, with no GET polling."""
     monkeypatch.setattr(gsc_page_experience.time, "sleep", lambda *_a: None)
-    with patch("urllib.request.urlopen", return_value=_mock_observatory_response()):
+    response = _mock_observatory_response()
+    with patch("urllib.request.urlopen", return_value=response) as fetch:
         out = gsc_page_experience.run_observatory("example.com")
     assert out["grade"] == "A+"
     assert out["score"] == 120
+    assert out["scan_id"] == 42
+    fetch.assert_called_once()
+    request = fetch.call_args.args[0]
+    assert request.full_url == "https://observatory-api.mdn.mozilla.net/api/v2/scan?host=example.com"
+    assert request.method == "POST"
 
 
-def test_run_observatory_post_409_continues_to_get(monkeypatch):
-    """If POST returns 409 (cached scan), GET should still work."""
+def test_run_observatory_http_error_does_not_get_or_retry(monkeypatch):
     import urllib.error
     monkeypatch.setattr(gsc_page_experience.time, "sleep", lambda *_a: None)
     post_err = urllib.error.HTTPError("u", 409, "conflict", {}, None)
-    get_ok = _mock_observatory_response(grade="B")
-    with patch("urllib.request.urlopen", side_effect=[post_err, get_ok]):
+    with patch("urllib.request.urlopen", side_effect=post_err) as fetch:
         out = gsc_page_experience.run_observatory("example.com")
-    assert out["grade"] == "B"
+    assert out["error"] == "observatory_http_409"
+    fetch.assert_called_once()
+
+
+@pytest.mark.parametrize("payload,error", [
+    (b"not json", "invalid_response"),
+    (b"[]", "invalid_response"),
+    (b'{"error":"dns failed"}', "observatory_scan_failed"),
+    (b'{"score":0}', "incomplete_response"),
+])
+def test_observatory_invalid_or_incomplete_response(payload, error):
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.read.return_value = payload
+    with patch("urllib.request.urlopen", return_value=response):
+        assert gsc_page_experience.run_observatory("example.com")["error"] == error
+    response.__exit__.assert_called_once()
 
 
 # ---------- SSL Labs ----------

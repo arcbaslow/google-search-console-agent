@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Use Mozilla Observatory v2 `/scan` and its POST response; report invalid, incomplete and failed scans explicitly.
+
 - Require resolved-target confirmation inside every sitemap and site write adapter; refusal or EOF cancels before authentication or API access.
 
 ## [0.2.2] - 2026-09-08

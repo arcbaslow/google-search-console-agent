@@ -81,3 +81,9 @@ Only `y` proceeds. Refusal, EOF or interruption returns `status: cancelled`
 without resolving credentials or calling the API. There is no bypass flag.
 Keep stdout available for JSON. Show the user the adapter prompt; never
 pipe an automatic answer or chain writes.
+
+## Observatory contract
+
+Page-experience checks use Mozilla Observatory v2 `/scan`: one POST returns
+the result, with no GET polling. Errors or incomplete results are reported
+explicitly. Security-header grades do not establish a ranking effect.

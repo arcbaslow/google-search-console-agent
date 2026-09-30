@@ -220,3 +220,11 @@ URL inspection for targeted single-URL diagnostics.
 Direct CLI and Python sitemap/site writes print resolved targets to stderr
 and ask `Apply? [y/N]`. Only `y` executes the request. No answer cancels;
 there is no `--yes` option. Agent users must answer the same prompt.
+
+## Observatory API
+
+The page-experience adapter uses the synchronous Mozilla Observatory v2
+[scan endpoint](https://developer.mozilla.org/en-US/observatory/docs/faq).
+It makes one POST and does not poll. Results are public, and the service
+returns cached scans within its cooldown. Header grades describe security
+posture and do not prove a ranking effect.
