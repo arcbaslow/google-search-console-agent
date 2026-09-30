@@ -547,10 +547,11 @@ def run_page_experience(site_url):
     summary_bits = []
     for source, result in report.items():
         if isinstance(result, dict) and result.get("error"):
-            findings.append({
-                "severity": "Medium", "title": f"{source} unavailable",
-                "detail": str(result.get("message") or result["error"]),
-            })
+            if source != "headers":  # The header failure already has a finding above.
+                findings.append({
+                    "severity": "Medium", "title": f"{source} unavailable",
+                    "detail": str(result.get("message") or result["error"]),
+                })
             summary_bits.append(f"{source} unavailable")
     if headers_report.get("grade"):
         summary_bits.append(f"headers {headers_report['grade']}")

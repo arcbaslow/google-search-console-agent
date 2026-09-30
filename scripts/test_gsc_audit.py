@@ -336,3 +336,15 @@ def test_competitor_rank_does_not_match_a_domain_suffix(monkeypatch):
     ]})
     out = gsc_audit.run_backlinks("example.com", ["notexample.com"])
     assert any("#2 of 2" in f["title"] for f in out["findings"])
+
+def test_header_failure_is_reported_once_with_other_source_results(monkeypatch):
+    monkeypatch.setattr(gsc_audit.gsc_page_experience, "full_report", lambda _: {
+        "headers": {"error": "transport", "message": "header timeout"},
+        "observatory": {"grade": "A"}, "ssl_labs": {"grade": "A"},
+    })
+    out = gsc_audit.run_page_experience("example.com")
+    assert len(out["findings"]) == 1
+    assert out["findings"][0]["detail"] == "header timeout"
+    assert "headers unavailable" in out["summary"]
+    assert "observatory A" in out["summary"]
+    assert "ssl-labs A" in out["summary"]

@@ -312,3 +312,5 @@ series retain their existing wrapper limits.
 There is no automatic pagination. Search Console returns top rows and does
 not guarantee an exhaustive export; offsets alone do not change that.
 This flag never calls URL Inspection.
+
+Each unavailable page-experience source produces one failure finding; a failed header probe is not counted again by the combined error summary.

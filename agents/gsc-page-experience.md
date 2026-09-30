@@ -95,3 +95,5 @@ use requires Qualys permission. Respect retry hints; do not retry overload
 errors in a tight loop. `--no-cache` starts a new scan once in either mode.
 
 The audit driver surfaces individual source errors as unavailable findings and retains all other results.
+
+Each unavailable page-experience source produces one failure finding; a failed header probe is not counted again by the combined error summary.
