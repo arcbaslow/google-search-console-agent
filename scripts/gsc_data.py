@@ -81,6 +81,11 @@ def query(site_url: str, dimensions: list[str] | None = None, days: int = 28,
     if data_state not in DATA_STATES:
         raise ValueError(f"data_state must be one of {sorted(DATA_STATES)}")
 
+    if type(row_limit) is not int or not 1 <= row_limit <= 25000:
+        raise ValueError("row_limit must be an integer between 1 and 25000")
+    if type(start_row) is not int or start_row < 0:
+        raise ValueError("start_row must be a nonnegative integer")
+
     start, end = date_range(days)
     cache_args = ("query", site_url, tuple(dims), search_type, row_limit, start_row,
                   filter_expr, data_state, start, end)
@@ -172,7 +177,9 @@ def main():
     parser.add_argument("--dimensions", help="Comma-separated dimensions for --report")
     parser.add_argument("--filter", help="Optional filter: '<dim> <op> <value>'")
     parser.add_argument("--days", type=int, default=28)
-    parser.add_argument("--rows", type=int, default=100)
+    parser.add_argument("--rows", type=int, default=100, help="Rows per request (1-25000)")
+    parser.add_argument("--start-row", type=int, default=0,
+                        help="Zero-based offset for one request; no automatic pagination")
     parser.add_argument("--search-type", default="web")
     parser.add_argument("--data-state", default="final", choices=sorted(DATA_STATES))
     parser.add_argument("--no-cache", action="store_true")
@@ -185,6 +192,7 @@ def main():
         "search_type": args.search_type,
         "data_state": args.data_state,
         "filter_expr": args.filter,
+        "start_row": args.start_row,
     }
     try:
         if args.queries:

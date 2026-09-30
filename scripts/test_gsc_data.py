@@ -95,3 +95,44 @@ def test_top_queries_wraps_query(monkeypatch):
     monkeypatch.setattr(gsc_data, "query", fake_query)
     gsc_data.top_queries("example.com", days=7, row_limit=10)
     assert captured["dimensions"] == ["query"]
+
+@pytest.mark.parametrize("row_limit,start_row", [
+    (0, 0), (25001, 0), (1.5, 0), (True, 0), (100, -1), (100, 1.5), (100, True),
+])
+def test_page_bounds_fail_before_authentication(monkeypatch, row_limit, start_row):
+    service = MagicMock(side_effect=AssertionError("no authentication"))
+    monkeypatch.setattr(gsc_data, "_get_service", service)
+    with pytest.raises(ValueError):
+        gsc_data.query("example.com", row_limit=row_limit, start_row=start_row)
+    service.assert_not_called()
+
+
+def test_explicit_page_is_one_request_and_has_distinct_cache_identity(monkeypatch):
+    service = MagicMock()
+    execute = service.searchanalytics.return_value.query.return_value.execute
+    execute.side_effect = [
+        {"rows": [{"keys": ["first"], "clicks": 1}]},
+        {"rows": [{"keys": ["second"], "clicks": 2}]},
+    ]
+    monkeypatch.setattr(gsc_data, "_get_service", lambda: service)
+    first = gsc_data.query("example.com", dimensions=["query"], row_limit=25000)
+    second = gsc_data.query("example.com", dimensions=["query"], row_limit=25000, start_row=25000)
+    assert first["rows"][0]["query"] == "first"
+    assert second["rows"][0]["query"] == "second"
+    assert service.searchanalytics.return_value.query.call_args.kwargs["body"]["startRow"] == 25000
+    assert service.searchanalytics.return_value.query.call_args.kwargs["body"]["rowLimit"] == 25000
+    assert gsc_data.query("example.com", dimensions=["query"], row_limit=25000, start_row=25000) == second
+    assert execute.call_count == 2
+
+
+@pytest.mark.parametrize("mode", ["--queries", "--pages", "--devices", "--countries", "--appearance", "--timeseries", "--report"])
+def test_cli_forwards_explicit_offset_to_every_read_mode(monkeypatch, mode, capsys):
+    import json
+
+    query = MagicMock(return_value={"rows": []})
+    monkeypatch.setattr(gsc_data, "query", query)
+    monkeypatch.setattr("sys.argv", ["gsc_data.py", "--site", "example.com", mode, "--start-row", "200"])
+    assert gsc_data.main() == 0
+    query.assert_called_once()
+    assert query.call_args.kwargs["start_row"] == 200
+    assert json.loads(capsys.readouterr().out) == {"rows": []}

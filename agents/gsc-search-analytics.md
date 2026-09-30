@@ -81,3 +81,16 @@ Optional `--search-type` (`web` / `image` / `video` / `news` / `discover`
 This agent does not emit CWV metrics. Its findings are qualitative
 trend descriptions; the `gsc-ctr-curve` agent owns the CTR / position
 benchmark.
+
+## Explicit Search Analytics pages
+
+Use `gsc_data.py --site example.com --queries --rows 100 --start-row 100`
+for one request starting at the zero-based offset. `--start-row` defaults to
+0 and applies to every query mode. The adapter validates nonnegative integer
+offsets and row limits of 1-25,000 before authentication. `--rows` controls
+queries, pages, countries and custom reports; devices, appearance and time
+series retain their existing wrapper limits.
+
+There is no automatic pagination. Search Console returns top rows and does
+not guarantee an exhaustive export; offsets alone do not change that.
+This flag never calls URL Inspection.
