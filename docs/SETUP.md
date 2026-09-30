@@ -332,3 +332,17 @@ replacement leaves the previous entry intact. Missing, expired, invalid-JSON
 and invalid-UTF-8 entries are cache misses; permission and write failures
 remain errors. The 15-minute TTL is unchanged. This applies to the shared
 JSON cache, not the separate Tranco CSV cache.
+
+## Inventory cache after writes
+
+Empty site and sitemap lists are valid cache hits. After a successful site
+add/delete, the adapter invalidates the site list and that property's sitemap
+list. A successful sitemap submit/delete invalidates only that property's
+sitemap list. Cancelled or failed API calls leave cached entries unchanged;
+unrelated properties and URL Inspection caches are preserved.
+
+All writes still show resolved targets and require `y/N`. If local cache
+invalidation fails after the API succeeds, the success status is preserved
+with `cache_warning`; surface it and do not repeat the remote write. Cache
+invalidation does not guarantee upstream read-after-write consistency or
+serialize independent processes that already have a read in flight.

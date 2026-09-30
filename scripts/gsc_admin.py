@@ -18,7 +18,7 @@ import sys
 from urllib.parse import urlsplit
 
 from gsc_auth import get_credentials
-from gsc_utils import cache_get, cache_set, normalize_site_url
+from gsc_utils import cache_delete, cache_get, cache_set, normalize_site_url
 
 
 def _get_service(write: bool = False):
@@ -45,9 +45,24 @@ def _confirm_write(action: str, site_url: str, feedpath: str | None = None) -> b
     except (EOFError, KeyboardInterrupt):
         return False
 
+def _invalidate_inventory(result, *cache_keys):
+    failed = []
+    for key in cache_keys:
+        try:
+            cache_delete(*key)
+        except OSError:
+            failed.append(key[0])
+    if failed:
+        result["cache_warning"] = (
+            "Remote write succeeded, but local inventory cache invalidation failed for: "
+            + ", ".join(failed) + ". Cached reads may be stale; do not repeat the write."
+        )
+    return result
+
+
 def list_sites():
     cached = cache_get("sites")
-    if cached:
+    if cached is not None:
         return cached
     service = _get_service()
     resp = service.sites().list().execute()
@@ -71,7 +86,8 @@ def add_site(site_url: str):
         return {"status": "cancelled", "site_url": site_url}
     service = _get_service(write=True)
     service.sites().add(siteUrl=site_url).execute()
-    return {"status": "added", "site_url": site_url}
+    return _invalidate_inventory({"status": "added", "site_url": site_url},
+                                 ("sites",), ("sitemaps", site_url))
 
 
 def delete_site(site_url: str):
@@ -80,7 +96,8 @@ def delete_site(site_url: str):
         return {"status": "cancelled", "site_url": site_url}
     service = _get_service(write=True)
     service.sites().delete(siteUrl=site_url).execute()
-    return {"status": "deleted", "site_url": site_url}
+    return _invalidate_inventory({"status": "deleted", "site_url": site_url},
+                                 ("sites",), ("sitemaps", site_url))
 
 
 # ---------- sitemaps ----------
@@ -88,7 +105,7 @@ def delete_site(site_url: str):
 def list_sitemaps(site_url: str):
     site_url = normalize_site_url(site_url)
     cached = cache_get("sitemaps", site_url)
-    if cached:
+    if cached is not None:
         return cached
     service = _get_service()
     resp = service.sitemaps().list(siteUrl=site_url).execute()
@@ -111,7 +128,9 @@ def submit_sitemap(site_url: str, feedpath: str):
         return {"status": "cancelled", "site_url": site_url, "feedpath": feedpath}
     service = _get_service(write=True)
     service.sitemaps().submit(siteUrl=site_url, feedpath=feedpath).execute()
-    return {"status": "submitted", "site_url": site_url, "feedpath": feedpath}
+    return _invalidate_inventory(
+        {"status": "submitted", "site_url": site_url, "feedpath": feedpath},
+        ("sitemaps", site_url))
 
 
 def delete_sitemap(site_url: str, feedpath: str):
@@ -122,7 +141,9 @@ def delete_sitemap(site_url: str, feedpath: str):
         return {"status": "cancelled", "site_url": site_url, "feedpath": feedpath}
     service = _get_service(write=True)
     service.sitemaps().delete(siteUrl=site_url, feedpath=feedpath).execute()
-    return {"status": "deleted", "site_url": site_url, "feedpath": feedpath}
+    return _invalidate_inventory(
+        {"status": "deleted", "site_url": site_url, "feedpath": feedpath},
+        ("sitemaps", site_url))
 
 
 # ---------- URL inspection ----------

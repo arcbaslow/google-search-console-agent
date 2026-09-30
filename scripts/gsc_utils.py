@@ -91,6 +91,11 @@ def cache_set(value: Any, *parts: Any) -> None:
             temporary_path.unlink(missing_ok=True)
 
 
+def cache_delete(*parts: Any) -> None:
+    """Remove one exact cache entry. Missing entries need no action."""
+    (CACHE_DIR / f"{_cache_key(*parts)}.json").unlink(missing_ok=True)
+
+
 def scrub_pii(data: Any) -> Any:
     if isinstance(data, dict):
         out = {}
