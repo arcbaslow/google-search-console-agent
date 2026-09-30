@@ -15,7 +15,7 @@ python scripts/gsc_auth.py --sites
 python scripts/gsc_admin.py --site <site> --list-sitemaps --json
 ```
 
-The audit driver also runs a light HTTP HEAD against the property's
+The audit driver also runs a light HTTP GET against the property's
 homepage to detect framework / platform markers (Next.js, Shopify,
 WordPress, Webflow, etc.). For ad-hoc use, you can call the same probe
 through `gsc_audit._probe_homepage` or just curl the homepage yourself.
@@ -95,3 +95,5 @@ Always runs first in `/gsc audit`. As a standalone, useful when:
 Unexpected overview failure is retained as an error section by the audit driver; later workers still run. A missing property produces a Critical finding rather than a hard stop.
 
 Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

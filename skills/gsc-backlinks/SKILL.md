@@ -74,3 +74,5 @@ Offer:
 
 - "Want to add this to the full audit? Use `/gsc audit <site>
   --with-backlinks --competitors a.com,b.com`."
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

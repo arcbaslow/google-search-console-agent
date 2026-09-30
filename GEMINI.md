@@ -108,3 +108,5 @@ A failed search worker lowers confidence to `low`; the existing convention
 for other High search findings is unchanged. URL Inspection remains omitted.
 
 Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

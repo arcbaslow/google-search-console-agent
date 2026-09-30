@@ -63,3 +63,5 @@ still useful.
 - "Neither data source gives a literal list of referring domains. For
   that, Common Crawl is the open-data path but requires cloud-scale
   compute."
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

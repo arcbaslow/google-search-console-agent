@@ -251,3 +251,5 @@ The driver still omits URL Inspection. Confidence drops to low for a failed
 search worker; other existing confidence rules are unchanged.
 
 Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
