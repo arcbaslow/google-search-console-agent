@@ -90,3 +90,5 @@ Only scan authorized hosts. Commercial API use requires Qualys permission:
 [terms](https://www.ssllabs.com/downloads/Qualys_SSL_Labs_Terms_of_Use.pdf).
 The polling budget is 120 seconds, with socket timeouts capped to remaining
 budget; this is not a hard wall-clock guarantee for streaming responses.
+
+Each unavailable page-experience source produces one failure finding; a failed header probe is not counted again by the combined error summary.
