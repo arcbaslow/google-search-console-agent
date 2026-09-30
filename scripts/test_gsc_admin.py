@@ -152,3 +152,81 @@ def test_inspection_cache_avoids_a_second_quota_call(monkeypatch):
     first = gsc_admin.inspect_url("example.com", "https://example.com/a", "en-US")
     assert gsc_admin.inspect_url("example.com", "https://example.com/a", "en-US") == first
     service.urlInspection().index().inspect().execute.assert_called_once_with()
+
+@pytest.mark.parametrize("resource,call", [
+    ("sites", lambda: gsc_admin.list_sites()),
+    ("sitemaps", lambda: gsc_admin.list_sitemaps("example.com")),
+])
+def test_empty_inventory_is_a_cache_hit(monkeypatch, resource, call):
+    service = MagicMock()
+    execute = getattr(service, resource).return_value.list.return_value.execute
+    execute.return_value = {}
+    monkeypatch.setattr(gsc_admin, "_get_service", lambda **kw: service)
+    assert call() == []
+    assert call() == []
+    execute.assert_called_once_with()
+
+
+@pytest.mark.parametrize("function,resource,method,feedpath", WRITES)
+@pytest.mark.parametrize("outcome", ["success", "cancelled", "failed"])
+def test_write_invalidates_only_related_inventory_after_success(
+        monkeypatch, function, resource, method, feedpath, outcome):
+    import gsc_utils
+
+    site = "sc-domain:example.com"
+    old_sites = [{"site_url": site}]
+    old_sitemaps = [{"path": "https://example.com/old.xml"}]
+    inspection_key = ("inspect", site, "https://example.com/a", None)
+    gsc_utils.cache_set(old_sites, "sites")
+    gsc_utils.cache_set(old_sitemaps, "sitemaps", site)
+    gsc_utils.cache_set([{"path": "unrelated"}], "sitemaps", "sc-domain:other.example")
+    gsc_utils.cache_set({"inspectionResult": {}}, *inspection_key)
+    service = MagicMock()
+    execute = getattr(getattr(service, resource).return_value, method).return_value.execute
+    if outcome == "failed":
+        execute.side_effect = RuntimeError("API failed")
+    factory = MagicMock(return_value=service)
+    monkeypatch.setattr(gsc_admin, "_get_service", factory)
+    monkeypatch.setattr("builtins.input", lambda: "n" if outcome == "cancelled" else "y")
+    args = ["example.com"] + ([feedpath] if feedpath else [])
+    if outcome == "failed":
+        with pytest.raises(RuntimeError, match="API failed"):
+            getattr(gsc_admin, function)(*args)
+    else:
+        result = getattr(gsc_admin, function)(*args)
+        assert "cache_warning" not in result
+    assert gsc_utils.cache_get("sitemaps", site) == (None if outcome == "success" else old_sitemaps)
+    assert gsc_utils.cache_get("sites") == (None if outcome == "success" and resource == "sites" else old_sites)
+    assert gsc_utils.cache_get("sitemaps", "sc-domain:other.example") == [{"path": "unrelated"}]
+    assert gsc_utils.cache_get(*inspection_key) == {"inspectionResult": {}}
+    if outcome == "cancelled":
+        factory.assert_not_called()
+        execute.assert_not_called()
+    else:
+        execute.assert_called_once_with()
+
+
+def test_cache_invalidation_failure_does_not_repeat_successful_write(monkeypatch):
+    service = MagicMock()
+    monkeypatch.setattr(gsc_admin, "_get_service", lambda **kw: service)
+    monkeypatch.setattr("builtins.input", lambda: "y")
+    delete = MagicMock(side_effect=[PermissionError("locked cache"), None])
+    monkeypatch.setattr(gsc_admin, "cache_delete", delete)
+    result = gsc_admin.add_site("example.com")
+    assert result["status"] == "added"
+    assert "cache_warning" in result
+    assert "do not repeat" in result["cache_warning"].lower()
+    assert delete.call_count == 2  # Still invalidate the other related entry.
+    service.sites.return_value.add.return_value.execute.assert_called_once_with()
+
+
+def test_successful_sitemap_write_refetches_inventory_on_next_read(monkeypatch):
+    service = MagicMock()
+    read = service.sitemaps.return_value.list.return_value.execute
+    read.side_effect = [{"sitemap": []}, {"sitemap": [{"path": "https://example.com/sitemap.xml"}]}]
+    monkeypatch.setattr(gsc_admin, "_get_service", lambda **kw: service)
+    monkeypatch.setattr("builtins.input", lambda: "y")
+    assert gsc_admin.list_sitemaps("example.com") == []
+    gsc_admin.submit_sitemap("example.com", "https://example.com/sitemap.xml")
+    assert gsc_admin.list_sitemaps("example.com") == [{"path": "https://example.com/sitemap.xml"}]
+    assert read.call_count == 2

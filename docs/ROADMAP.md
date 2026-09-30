@@ -283,6 +283,9 @@ local-commit constraints continue to apply.
 - Atomic JSON cache writes and malformed-entry recovery: implemented with
   interrupted-write and replacement-failure regression tests. Permission
   failures remain errors; the separate Tranco CSV cache is not covered.
-- Empty-list hits and invalidation after confirmed successful writes: next.
+- Empty-list hits and targeted inventory invalidation after confirmed
+  successful writes: implemented. Cancelled/failed calls retain caches;
+  invalidation errors return a warning without repeating a successful write.
+  Cross-process reads already in flight remain outside this cache contract.
 - Broad raw-payload privacy and exact-target/display-data separation remain
   design work. No universal anonymization or historical cache purge is claimed.
