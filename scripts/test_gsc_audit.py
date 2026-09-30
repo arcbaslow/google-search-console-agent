@@ -14,6 +14,32 @@ def test_origin_of_handles_url_prefix():
     assert gsc_audit._origin_of("https://example.com/") == "https://example.com"
 
 
+def test_origin_excludes_path_query_fragment_but_keeps_port():
+    assert gsc_audit._origin_of("https://example.com:8443/shop/?q=x#top") == "https://example.com:8443"
+
+
+def test_cwv_uses_origin_for_prefix_property(monkeypatch):
+    from unittest.mock import MagicMock
+
+    query = MagicMock(return_value={"status": "no_data"})
+    monkeypatch.setattr(gsc_audit.gsc_crux, "query_record", query)
+    gsc_audit.run_cwv("https://example.com/shop/")
+    query.assert_called_once_with(origin="https://example.com", form_factor="ALL_FORM_FACTORS")
+
+
+def test_backlink_prefix_property_matches_its_exact_domain(monkeypatch):
+    from unittest.mock import MagicMock
+
+    query = MagicMock(return_value={"rows": [
+        {"domain": "notexample.com", "open_pagerank_decimal": 8},
+        {"domain": "example.com", "open_pagerank_decimal": 1},
+    ]})
+    monkeypatch.setattr(gsc_audit.gsc_backlinks, "compare_domains", query)
+    result = gsc_audit.run_backlinks("https://example.com/shop/", ["notexample.com"])
+    query.assert_called_once_with(["example.com", "notexample.com"])
+    assert result["findings"]
+
+
 def test_run_overview_flags_zero_sitemaps(monkeypatch):
     monkeypatch.setattr(gsc_audit.gsc_admin, "list_sites", lambda: [
         {"site_url": "sc-domain:example.com", "permission_level": "siteOwner"},

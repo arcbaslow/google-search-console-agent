@@ -28,6 +28,7 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -63,7 +64,8 @@ def _origin_of(site_url):
     """Convert a GSC site URL or sc-domain entry to a fetchable origin."""
     if site_url.startswith("sc-domain:"):
         return "https://" + site_url[len("sc-domain:"):].rstrip("/")
-    return site_url.rstrip("/")
+    parsed = urllib.parse.urlsplit(site_url)
+    return urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
 
 
 def _probe_homepage(origin):
@@ -421,15 +423,14 @@ def run_structured_data(site_url, sample_size=20):
 def run_backlinks(site_url, competitors=None):
     """Domain rank for the property plus optional competitor comparison."""
     site_url = normalize_site_url(site_url)
-    bare_domain = site_url.split("sc-domain:")[-1] if site_url.startswith("sc-domain:") \
-        else site_url
+    bare_domain = urllib.parse.urlsplit(_origin_of(site_url)).hostname
     findings: list[dict[str, Any]] = []
 
     domains = [bare_domain] + (competitors or [])
     out = gsc_backlinks.compare_domains(domains) if competitors else \
         {"rows": [_single_row(bare_domain)], "primary": bare_domain}
 
-    primary_row = next((r for r in out.get("rows") or [] if r["domain"].endswith(bare_domain)), None)
+    primary_row = next((r for r in out.get("rows") or [] if r["domain"] == bare_domain), None)
     if not primary_row:
         return _ok("gsc-backlinks", "could not look up domain rank", [], out)
 

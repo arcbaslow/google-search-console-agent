@@ -78,3 +78,5 @@ Unexpected worker failures become source-specific error findings while the
 remaining sections are retained. Security-source errors are shown explicitly.
 The driver never bulk-inspects URLs. A failed search worker lowers confidence.
 Other optional-source failures do not change the existing confidence label.
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

@@ -65,3 +65,5 @@ Offer:
 
 - "Want the per-URL Lighthouse pass on the worst page? Use `/gsc pagespeed <url>`."
 - "Want the full audit including search analytics? Use `/gsc audit <site>`."
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

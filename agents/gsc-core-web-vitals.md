@@ -76,3 +76,5 @@ attaches the CWV verdict automatically:
   this agent ignores FID entirely.
 - URL-level data is available for high-traffic pages only. For low-
   traffic page deep-dives, run `gsc-pagespeed`.
+
+For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.

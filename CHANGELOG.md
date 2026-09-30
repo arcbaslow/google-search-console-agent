@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Derive valid CrUX origins and exact domain-rank targets from URL-prefix properties.
+
 - Compare sitemap string counts numerically so `"0"` errors no longer produces a false High finding.
 
 - Retain successful audit sections when a worker fails and show unavailable security sources in the action plan.
