@@ -71,6 +71,10 @@ never hits PSI or CrUX, never hits Tranco / Open PageRank / Observatory
 that way: any test that touches the network must be guarded behind an
 env var and skipped by default.
 
+The shared test fixture blocks unmocked socket connections and Google ADC
+discovery. Use synthetic credentials in memory; do not create credential
+files or use developer credentials in tests.
+
 ## License
 
 By contributing you agree your changes are released under the MIT
