@@ -49,7 +49,9 @@ Search Analytics applies the best-effort `scrub_pii` filter before caching.
 The shared cache writer does not scrub payloads itself. URL Inspection,
 PSI (including raw diagnostics), CrUX and admin responses can contain URLs
 or other identifying data. The regex/denylist filter is not comprehensive
-anonymization; mixed literal and encoded identifiers need further review.
+anonymization. Mixed literal and percent-encoded email/phone identifiers are
+redacted together; Search Analytics cache hits are rechecked and repaired on
+access. This does not sweep old cache files or cover arbitrary encodings.
 Treat caches under `~/.claude/gsc-cache/` and raw reports as private data.
 See docs/ROADMAP.md for the pending cache privacy and consistency work.
 

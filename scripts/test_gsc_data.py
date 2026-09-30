@@ -136,3 +136,27 @@ def test_cli_forwards_explicit_offset_to_every_read_mode(monkeypatch, mode, caps
     query.assert_called_once()
     assert query.call_args.kwargs["start_row"] == 200
     assert json.loads(capsys.readouterr().out) == {"rows": []}
+
+def test_cached_queries_repair_mixed_redaction_without_api_call(monkeypatch):
+    import gsc_utils
+
+    monkeypatch.setattr(gsc_data, "date_range", lambda days: ("2026-09-01", "2026-09-28"))
+    parts = ("query", "sc-domain:example.com", ("query",), "web", 1000, 0,
+             None, "final", "2026-09-01", "2026-09-28")
+    cached = {"rows": [{"query": "[email-redacted] and encoded%40example.com", "clicks": 10}]}
+    gsc_utils.cache_set(cached, *parts)
+    factory = MagicMock(side_effect=AssertionError("cached result must not fetch"))
+    monkeypatch.setattr(gsc_data, "_get_service", factory)
+    result = gsc_data.query("example.com", dimensions=["query"])
+    assert result["rows"][0] == {"query": "[email-redacted] and [email-redacted]", "clicks": 10}
+    assert gsc_utils.cache_get(*parts) == result
+    factory.assert_not_called()
+
+
+def test_clean_cached_query_does_not_extend_its_lifetime(monkeypatch):
+    cached = {"rows": [{"query": "example", "clicks": 10}]}
+    monkeypatch.setattr(gsc_data, "cache_get", lambda *parts: cached)
+    write = MagicMock()
+    monkeypatch.setattr(gsc_data, "cache_set", write)
+    assert gsc_data.query("example.com", dimensions=["query"]) == cached
+    write.assert_not_called()

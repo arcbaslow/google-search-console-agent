@@ -92,7 +92,10 @@ def query(site_url: str, dimensions: list[str] | None = None, days: int = 28,
     if use_cache:
         cached = cache_get(*cache_args)
         if cached:
-            return cached
+            scrubbed = scrub_pii(cached)
+            if scrubbed != cached:
+                cache_set(scrubbed, *cache_args)
+            return scrubbed
 
     body: dict[str, Any] = {
         "startDate": start,
