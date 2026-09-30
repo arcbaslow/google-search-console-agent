@@ -6,7 +6,7 @@ days for any origin or URL Google has enough Chrome traffic data for.
 Two endpoints:
 
   queryRecord         — snapshot of LCP, INP, CLS, FCP, TTFB at p75
-  queryHistoryRecord  — last 25 weeks of the same metrics, week-by-week
+  queryHistoryRecord  — 25 weekly periods by default, up to 40
 
 For origin-level audits CrUX is the right call because it covers the
 whole site, not a single URL. For per-page deep dives use `gsc_psi.py`.
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import urllib.error
 import urllib.request
@@ -81,13 +82,15 @@ def query_record(origin: str | None = None, url: str | None = None,
     if form_factor not in FORM_FACTORS:
         raise ValueError(f"form_factor must be one of {FORM_FACTORS}")
 
-    cache_args = ("crux_record", origin, url, form_factor)
+    cache_args = ("crux_record_v2", origin, url, form_factor)
     if use_cache:
         cached = cache_get(*cache_args)
         if cached:
             return cached
 
-    body: dict[str, Any] = {"formFactor": form_factor}
+    body: dict[str, Any] = {}
+    if form_factor != "ALL_FORM_FACTORS":
+        body["formFactor"] = form_factor
     if origin:
         body["origin"] = origin
     else:
@@ -104,23 +107,26 @@ def query_history(origin: str | None = None, url: str | None = None,
                   form_factor: str = "ALL_FORM_FACTORS",
                   collection_period_count: int = 25,
                   use_cache: bool = True) -> dict[str, Any]:
-    """Week-by-week CrUX history (up to 25 weeks). Returns the same shape as
+    """Week-by-week CrUX history (up to 40 weeks). Returns the same shape as
     query_record but each metric is a list of weekly p75 values + categories."""
     if (origin and url) or (not origin and not url):
         raise ValueError("pass exactly one of origin / url")
     if form_factor not in FORM_FACTORS:
         raise ValueError(f"form_factor must be one of {FORM_FACTORS}")
 
-    cache_args = ("crux_history", origin, url, form_factor, collection_period_count)
+    if type(collection_period_count) is not int or not 1 <= collection_period_count <= 40:
+        raise ValueError("collection_period_count must be an integer between 1 and 40")
+    cache_args = ("crux_history_v2", origin, url, form_factor, collection_period_count)
     if use_cache:
         cached = cache_get(*cache_args)
         if cached:
             return cached
 
     body: dict[str, Any] = {
-        "formFactor": form_factor,
         "collectionPeriodCount": collection_period_count,
     }
+    if form_factor != "ALL_FORM_FACTORS":
+        body["formFactor"] = form_factor
     if origin:
         body["origin"] = origin
     else:
@@ -142,6 +148,15 @@ _METRIC_KEYS = (
 )
 
 
+def _p75(value):
+    """CrUX missing periods may contain null or the string NaN."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def _flatten_record(resp, target, form_factor):
     if resp.get("_status") == "no_data":
         return {"target": target, "form_factor": form_factor, "status": "no_data"}
@@ -154,14 +169,7 @@ def _flatten_record(resp, target, form_factor):
         if not m:
             continue
         pct = m.get("percentiles") or {}
-        p75 = pct.get("p75")
-        if raw_key == "cumulative_layout_shift" and isinstance(p75, str):
-            # CLS is returned as a string; coerce to float
-            try:
-                p75 = float(p75)
-            except ValueError:
-                pass
-        flat[friendly] = p75
+        flat[friendly] = _p75(pct.get("p75"))
     return flat
 
 
@@ -178,9 +186,7 @@ def _flatten_history(resp, target, form_factor):
         if not m:
             continue
         timeseries = (m.get("percentilesTimeseries") or {}).get("p75s") or []
-        if raw_key == "cumulative_layout_shift":
-            timeseries = [float(v) if isinstance(v, str) else v for v in timeseries]
-        flat["history"][friendly] = timeseries
+        flat["history"][friendly] = [_p75(v) for v in timeseries]
     return flat
 
 
@@ -190,7 +196,7 @@ def main():
     parser.add_argument("--url", help="Single URL (mutually exclusive with --origin)")
     parser.add_argument("--form-factor", default="ALL_FORM_FACTORS", choices=FORM_FACTORS)
     parser.add_argument("--history", action="store_true", help="Pull weekly history instead of snapshot")
-    parser.add_argument("--periods", type=int, default=25, help="History period count (max 25)")
+    parser.add_argument("--periods", type=int, default=25, help="History period count (1-40, default 25)")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()

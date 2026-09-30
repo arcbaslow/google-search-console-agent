@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Correct all-form-factor CrUX requests, accept 1-40 history periods and emit JSON null for missing p75 values; add direct mocked adapter coverage.
+
 - Derive valid CrUX origins and exact domain-rank targets from URL-prefix properties.
 
 - Compare sitemap string counts numerically so `"0"` errors no longer produces a false High finding.

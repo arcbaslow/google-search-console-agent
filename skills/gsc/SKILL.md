@@ -141,7 +141,7 @@ the window are complete.
 
 - Search analytics (queries, pages, devices, countries): 28 days default
 - Time-series: 90 days default
-- CrUX: aggregates the last 28 days (or weekly history up to 25 weeks)
+- CrUX: aggregates the last 28 days (or weekly history up to 40 periods, default 25)
 
 Override the window via `--days N` on any command.
 

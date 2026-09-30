@@ -110,3 +110,10 @@ for other High search findings is unchanged. URL Inspection remains omitted.
 Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
 
 For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
+
+## CrUX request semantics
+
+`ALL_FORM_FACTORS` is a local CLI alias: the adapter omits `formFactor` on
+the wire. History defaults to 25 weekly periods; `--periods` accepts 1-40.
+Each period is an overlapping 28-day aggregate. Missing p75 values are JSON
+null, not zero or NaN. FCP and TTFB are diagnostics, not Core Web Vitals.

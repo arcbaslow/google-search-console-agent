@@ -53,7 +53,7 @@ available only for a subset of high-traffic pages.
 
 - CrUX needs a meaningful volume of Chrome traffic. Small or new
   origins return `no_data` — the skill reports that gracefully.
-- Snapshot is a rolling 28-day window; history is 25 weeks at weekly
+- Snapshot is a rolling 28-day window; history defaults to 25 periods (up to 40) at weekly
   resolution.
 - Per-URL data is only available for URLs with enough sampled visits.
   Use `gsc-pagespeed` if you need per-URL synthetic Lighthouse data
@@ -67,3 +67,8 @@ Offer:
 - "Want the full audit including search analytics? Use `/gsc audit <site>`."
 
 For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
+
+Use `--history --periods 40` for the maximum history; default remains 25.
+Periods are overlapping 28-day aggregates sampled weekly. `ALL_FORM_FACTORS`
+omits the wire filter. Missing p75 values are null, not zeros. Only LCP,
+INP and CLS determine the Core Web Vitals pass; FCP/TTFB are diagnostics.
