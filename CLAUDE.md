@@ -116,3 +116,13 @@ For URL-prefix properties, the audit derives CrUX origins from scheme and author
 the wire. History defaults to 25 weekly periods; `--periods` accepts 1-40.
 Each period is an overlapping 28-day aggregate. Missing p75 values are JSON
 null, not zero or NaN. FCP and TTFB are diagnostics, not Core Web Vitals.
+
+## Structured-data verdict scope
+
+JSON-LD verdicts are limited top-level field checks, not Google eligibility
+results. `unchecked` marks unknown types and incomplete contextual rules;
+`unsupported` marks retired FAQPage/HowTo rich results. Article variants and
+Organization have no universal required fields. Rollups count invalid JSON
+and report fetch failures separately from successfully analyzed pages. Do not
+infer missing markup from failed fetches or recommend retired rich results.
+See `skills/gsc-structured-data/SKILL.md` for the full verdict vocabulary.

@@ -1,79 +1,70 @@
 ---
 name: gsc-structured-data
-description: Site-wide structured-data auditor. Samples URLs from the sitemap, parses every JSON-LD block, and validates required + recommended fields per Schema.org type. Complements gsc-url-inspect which is quota-heavy and one URL at a time.
+description: Sample static HTML and report JSON-LD field checks, retired types and coverage limitations.
 model: sonnet
 maxTurns: 15
 tools: Read, Bash, Write
 ---
 
-You are a structured-data auditor. Given a GSC property:
+# GSC: Structured Data
 
-## Data fetch
+Fetch a bounded sitemap sample or a single page and check JSON-LD in its
+static HTML. These checks use no Search Console API or URL Inspection quota.
 
-```
-python scripts/gsc_structured_data.py --site <site> --sample 25 --json
-```
-
-For a single-URL deep dive (e.g. when a specific template is suspect):
-
-```
-python scripts/gsc_structured_data.py --url <full-url> --json
+```bash
+python scripts/gsc_structured_data.py --url https://example.com/products/foo --json
+python scripts/gsc_structured_data.py --site example.com --sample 25 --json
 ```
 
-## What to surface
+The audit driver includes this check by default. Use
+`--structured-data-sample 50` to change its sample size.
 
-### Coverage
+## Read the result
 
-- `urls_with_jsonld / urls_analyzed`. If under 50%, surface "most of
-  the site has no structured data — rich-results eligibility limited
-  to the pages that do".
-- If 0%, surface as Medium and recommend instrumenting JSON-LD on
-  Product / Article / BreadcrumbList templates as a baseline.
+| Verdict | Meaning |
+|---------|---------|
+| `pass` | Implemented top-level field checks passed |
+| `partial` | Recommended fields are missing |
+| `fail` | An implemented required field is missing |
+| `unchecked` | Unknown type or contextual/nested rules need manual review |
+| `unsupported` | Google has retired this rich-result type |
+| `untyped` | No `@type` is present |
+| `invalid` | JSON could not be parsed |
 
-### Block verdicts (rollup)
+No verdict guarantees Google eligibility or appearance. `validation_scope`
+is `top_level_presence_only`. Product, JobPosting, Review, AggregateRating,
+BreadcrumbList and Course need contextual validation; passing their minimum
+field checks returns `unchecked`. For example, Product offers/reviews and
+remote-job location requirements cannot be reduced to one mandatory list.
 
-| Verdict | Meaning | Severity |
-|---------|---------|----------|
-| `fail` | Required field missing — Google will not show rich results | High |
-| `partial` | Required ok, recommended missing — eligible but weaker | Medium |
-| `pass` | Clean | none |
-| `untyped` | Block lacks `@type` — useless | Low |
-| `invalid` | JSON couldn't be parsed | Low |
+Article, NewsArticle, BlogPosting and Organization have no universally
+required fields in Google's current documentation. Recipe requires name and
+image; ingredients and instructions are recommended. Course list remains
+supported, but Course info has retired. FAQPage and HowTo return
+`unsupported`; their Schema.org syntax can still be valid.
 
-### Top missing fields
+## Coverage and findings
 
-The script's `rollup.top_missing_required` is the most actionable
-output. It tells you the single template-level fix that lifts the
-most pages. Examples:
+Use `urls_with_jsonld / urls_analyzed` only for successfully fetched pages.
+Report `urls_attempted` and `fetch_failures` separately. A failed fetch does
+not establish missing markup. Rollups include invalid JSON, unchecked and
+unsupported blocks. Use `top_missing_required` to locate template problems,
+then confirm the relevant Google requirements before suggesting a fix.
 
-- `Product.aggregateRating` missing across the catalogue → enable
-  ratings or hide the markup, don't ship partials
-- `Article.author` missing → fix the editorial template
-- `BreadcrumbList.itemListElement` missing → fix the layout template
+Recommend required-field and invalid-JSON repairs first. Treat recommended
+fields and unchecked types as review work. Do not recommend adding FAQ or
+HowTo markup for Google rich results, or assert that missing optional ratings
+or Article authorship makes all markup ineligible.
 
-## Output format
+## Limits and references
 
-```json
-{
-  "agent": "gsc-structured-data",
-  "summary": "25 URLs sampled, JSON-LD coverage 92%, verdicts {pass: 22, partial: 3, fail: 0}",
-  "findings": [
-    {"severity": "Medium", "title": "3 blocks missing recommended fields",
-     "detail": "..."}
-  ],
-  "data": { ...sample report... }
-}
-```
+The parser does not execute JavaScript or read microdata/RDFa. An empty
+result establishes only that this fetch contained no recognized JSON-LD.
+Nested fields, value formats, page context and Google's content policies
+require further review. Use Google's Rich Results Test for that review;
+URL Inspection is a separate, explicit single-URL action, never a batch loop.
 
-## Caveats
-
-- The parser sees only static HTML. If the site is a client-rendered
-  SPA without server-side JSON-LD, the parser will return empty —
-  recommend SSR / Next.js' `<Script type="application/ld+json">` /
-  Nuxt equivalent.
-- Required-field rules match Google's rich-results docs at pin time.
-  Update the table in `gsc_structured_data.REQUIRED_FIELDS` when
-  Google adds new rich-result types.
-- For per-URL rich-results status as Google sees it, use `gsc-url-
-  inspect` — it's the authoritative answer but capped to 2,000
-  inspections / day.
+- [Google structured-data gallery](https://developers.google.com/search/docs/appearance/structured-data/search-gallery)
+- [Article](https://developers.google.com/search/docs/appearance/structured-data/article)
+- [Recipe](https://developers.google.com/search/docs/appearance/structured-data/recipe)
+- [Documentation updates and retirements](https://developers.google.com/search/updates)

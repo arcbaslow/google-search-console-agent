@@ -258,3 +258,12 @@ Use `--history --periods 40` for the maximum history; default remains 25.
 Periods are overlapping 28-day aggregates sampled weekly. `ALL_FORM_FACTORS`
 omits the wire filter. Missing p75 values are null, not zeros. Only LCP,
 INP and CLS determine the Core Web Vitals pass; FCP/TTFB are diagnostics.
+
+## Structured-data report limits
+
+The local JSON-LD check reports `unchecked` for unknown or contextual types
+and `unsupported` for retired FAQPage/HowTo rich results. It cannot guarantee
+Google eligibility. `urls_analyzed` counts successful fetches; compare that
+with `urls_attempted` and `fetch_failures` before interpreting coverage.
+Invalid JSON remains visible in the block verdict rollup. See the
+[structured-data skill](../skills/gsc-structured-data/SKILL.md).

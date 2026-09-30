@@ -1,6 +1,6 @@
 ---
 name: gsc-structured-data
-description: "Site-wide structured-data audit. Parses JSON-LD from a sample of sitemap URLs locally and validates required fields per Schema.org type (Product, Article, FAQPage, HowTo, Recipe, Event, BreadcrumbList, Organization, JobPosting, …). Complements gsc-url-inspect, which is quota-heavy and one URL at a time."
+description: "Sample static HTML and check JSON-LD presence and limited top-level fields. Report retired rich-result types, unchecked contexts and fetch failures without using URL Inspection quota."
 user-invokable: true
 argument-hint: "<url> | <site> [--sample N]"
 license: MIT
@@ -12,76 +12,63 @@ metadata:
 
 # GSC: Structured Data
 
-GSC's URL Inspection API exposes rich-results status per URL, but it
-caps at 2,000 calls per day and one URL per request. This skill samples
-N URLs from the sitemap, parses every JSON-LD block locally, and
-validates required + recommended fields per schema type. No API quota.
+Fetch a bounded sitemap sample or a single page and check JSON-LD in its
+static HTML. These checks use no Search Console API or URL Inspection quota.
 
-## Direct commands
+```bash
+python scripts/gsc_structured_data.py --url https://example.com/products/foo --json
+python scripts/gsc_structured_data.py --site example.com --sample 25 --json
+```
 
-| Intent | Command |
-|--------|---------|
-| Single URL | `python scripts/gsc_structured_data.py --url https://example.com/products/foo --json` |
-| Sitemap sample | `python scripts/gsc_structured_data.py --site example.com --sample 25 --json` |
-| Sitemap sample (bigger) | `python scripts/gsc_structured_data.py --site example.com --sample 100 --json` |
+The audit driver includes this check by default. Use
+`--structured-data-sample 50` to change its sample size.
 
-## What's checked
+## Read the result
 
-For each JSON-LD block found, the validator looks up the `@type`
-against the bundled required- and recommended-field tables and reports:
+| Verdict | Meaning |
+|---------|---------|
+| `pass` | Implemented top-level field checks passed |
+| `partial` | Recommended fields are missing |
+| `fail` | An implemented required field is missing |
+| `unchecked` | Unknown type or contextual/nested rules need manual review |
+| `unsupported` | Google has retired this rich-result type |
+| `untyped` | No `@type` is present |
+| `invalid` | JSON could not be parsed |
 
-- **pass** — required fields all present
-- **partial** — required ok, recommended fields missing (still
-  eligible for rich results but weaker)
-- **fail** — required field(s) missing (rich-results not eligible)
-- **untyped** — block has no `@type`
-- **invalid** — JSON couldn't be parsed
+No verdict guarantees Google eligibility or appearance. `validation_scope`
+is `top_level_presence_only`. Product, JobPosting, Review, AggregateRating,
+BreadcrumbList and Course need contextual validation; passing their minimum
+field checks returns `unchecked`. For example, Product offers/reviews and
+remote-job location requirements cannot be reduced to one mandatory list.
 
-The sitemap-sample mode also rolls up a top-10 "most-commonly-missing
-required field" list across the sample — that tells you what one
-template fix would lift the whole site.
+Article, NewsArticle, BlogPosting and Organization have no universally
+required fields in Google's current documentation. Recipe requires name and
+image; ingredients and instructions are recommended. Course list remains
+supported, but Course info has retired. FAQPage and HowTo return
+`unsupported`; their Schema.org syntax can still be valid.
 
-## Supported schema types
+## Coverage and findings
 
-Required-field validation covers:
+Use `urls_with_jsonld / urls_analyzed` only for successfully fetched pages.
+Report `urls_attempted` and `fetch_failures` separately. A failed fetch does
+not establish missing markup. Rollups include invalid JSON, unchecked and
+unsupported blocks. Use `top_missing_required` to locate template problems,
+then confirm the relevant Google requirements before suggesting a fix.
 
-- `Product`, `Article`, `NewsArticle`, `BlogPosting`
-- `FAQPage`, `Question`
-- `HowTo`
-- `Recipe`
-- `Event`
-- `BreadcrumbList`
-- `Organization`, `LocalBusiness`
-- `VideoObject`
-- `Course`
-- `JobPosting`
-- `Review`, `AggregateRating`
+Recommend required-field and invalid-JSON repairs first. Treat recommended
+fields and unchecked types as review work. Do not recommend adding FAQ or
+HowTo markup for Google rich results, or assert that missing optional ratings
+or Article authorship makes all markup ineligible.
 
-Other types are surfaced under `types_found` but not validated.
+## Limits and references
 
-## When to call
+The parser does not execute JavaScript or read microdata/RDFa. An empty
+result establishes only that this fetch contained no recognized JSON-LD.
+Nested fields, value formats, page context and Google's content policies
+require further review. Use Google's Rich Results Test for that review;
+URL Inspection is a separate, explicit single-URL action, never a batch loop.
 
-- After a template change — did the new product template drop a
-  required field?
-- Before submitting a sitemap — clean rich-results coverage at launch
-  prevents Google from learning to ignore your markup
-- Periodically alongside `/gsc inspect <url>` for spot-checks
-
-## Caveats
-
-- This is a static-HTML analyser. JSON-LD that is rendered client-side
-  by JavaScript will not be visible to the parser. (Most modern SSR
-  frameworks emit JSON-LD in the HTML; client-only SPAs are the
-  exception.)
-- The required-field tables match Google's rich-results docs as of
-  the version pinned in `gsc_structured_data.REQUIRED_FIELDS`. Update
-  when Google adds new rich-result types.
-
-## After analysis
-
-Offer:
-
-- "Want a per-URL deep dive on a specific page? Use `/gsc inspect
-  <site> <url>`."
-- "Want to wire this into the full audit? It already is — pass
-  `--structured-data-sample 50` to `/gsc audit` for a bigger sample."
+- [Google structured-data gallery](https://developers.google.com/search/docs/appearance/structured-data/search-gallery)
+- [Article](https://developers.google.com/search/docs/appearance/structured-data/article)
+- [Recipe](https://developers.google.com/search/docs/appearance/structured-data/recipe)
+- [Documentation updates and retirements](https://developers.google.com/search/updates)

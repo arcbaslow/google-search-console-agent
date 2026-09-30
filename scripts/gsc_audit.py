@@ -381,15 +381,30 @@ def run_structured_data(site_url, sample_size=20):
     analyzed = rollup.get("urls_analyzed", 0)
     coverage_pct = round((has_jsonld / analyzed) * 100, 1) if analyzed else 0
 
+    if rollup.get("fetch_failures"):
+        findings.append({
+            "severity": "Low", "title": "Some structured-data pages could not be fetched",
+            "detail": f"{rollup['fetch_failures']} fetch failures; coverage uses successful fetches only.",
+        })
+    if verdicts.get("invalid"):
+        findings.append({
+            "severity": "Medium", "title": "Invalid JSON-LD in the sample",
+            "detail": f"{verdicts['invalid']} blocks could not be parsed.",
+        })
+    if verdicts.get("unsupported") or verdicts.get("unchecked"):
+        findings.append({
+            "severity": "Low", "title": "Some structured-data types need manual review",
+            "detail": "Retired or incompletely checked types are not treated as passing rich results.",
+        })
     if analyzed and has_jsonld == 0:
         findings.append({
             "severity": "Medium",
             "title": "No JSON-LD found on any sampled URL",
             "detail": (
                 f"Sampled {analyzed} URLs from the sitemap; none carry "
-                "JSON-LD structured data. Rich-results eligibility is lost. "
-                "Add Schema.org markup for the relevant page types (Product, "
-                "Article, FAQPage, BreadcrumbList, Organization)."
+                "JSON-LD structured data in the fetched HTML. Microdata, RDFa and "
+                "JavaScript-rendered markup are not checked. Review relevant "
+                "page types before deciding whether markup is needed."
             ),
         })
     elif verdicts.get("fail", 0):
@@ -399,7 +414,7 @@ def run_structured_data(site_url, sample_size=20):
             "detail": (
                 f"Top missing fields across the sample: "
                 f"{rollup.get('top_missing_required') or {}}. "
-                "Fix these to restore rich-results eligibility."
+                "Review these fields against Google documentation; local checks do not guarantee eligibility."
             ),
         })
     elif verdicts.get("partial", 0):
@@ -407,9 +422,8 @@ def run_structured_data(site_url, sample_size=20):
             "severity": "Medium",
             "title": f"{verdicts['partial']} JSON-LD block(s) missing recommended fields",
             "detail": (
-                "Schemas validate but lack recommended fields that improve "
-                "rich-results eligibility (e.g. Product.aggregateRating, "
-                "Article.dateModified)."
+                "The implemented presence checks found missing recommended fields. "
+                "Review applicable recommendations; this is not an eligibility verdict."
             ),
         })
 
