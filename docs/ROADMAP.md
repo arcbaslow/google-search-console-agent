@@ -31,8 +31,10 @@ Effort is approximate developer time including tests and documentation.
 
 ## Now
 
-These are bounded changes for this branch, in this order. Each code fix
-needs a mocked regression test. Features follow the fixes.
+Completed on `roadmap-work`. The table preserves the original scoped plan
+and baseline evidence. Fixes have mocked regression tests; the two read-only
+features followed the planned fixes. A final review also removed duplicate
+header-failure findings introduced by the combined-source error reporting.
 
 | Item | What and SEO value | Evidence | Effort | Risk |
 | --- | --- | --- | --- | --- |
@@ -58,7 +60,7 @@ needs a mocked regression test. Features follow the fixes.
 | Sampling and trend validity | Parse sitemap XML namespaces/entities with bounded traversal, preserve prefix semantics, report fetch coverage, handle odd date windows and omitted no-data dates. | `gsc_structured_data.py:191-227`; `gsc_audit.py:207-221`; [query reference][query] omits dates with no data. | 2-3 days | Replacing the parser and defining comparable date windows need a separate patch. No broader crawl or URL-inspection loop. |
 | PSI field units and authentication | Verify CLS scaling with a current primary-source payload/contract; audit ADC quota-project headers and scope compatibility for PSI/CrUX. | `gsc_psi.py:117-120`, `_bearer_token` in both adapters sends only bearer auth; [PSI reference][psi-reference], [CrUX auth/quotas][crux-api]. | 1 day | Suspected CLS unit bug, not proved by current official reference. Third-party examples alone are insufficient. Authenticated verification excluded; leave behavior unchanged pending evidence. |
 | More diagnostic CrUX metrics | Preserve histograms, LCP image subparts/resource types and RTT; label them separately from CWV pass/fail. | [CrUX releases][crux-releases], [API][crux-api]; `gsc_crux.py:136-165` drops everything except five p75 values. | 2 days | Output design and metric availability tests required. |
-| Report and instruction consistency | Bring HTML/PDF to Markdown context/benchmark parity; separate data availability from SEO severity; review auth and inspection docs. | `gsc_report.py:90-147,204-223`; HTML omits overview/benchmarks. `gsc_audit.py:573-575` reduces confidence for any High search finding, including real traffic decline. [Inspection reference][inspection]. | 2 days | Confidence meaning and presentation are product choices; preserve current semantics apart from explicit worker failures. |
+| Report and instruction consistency | Bring HTML/PDF to Markdown context/benchmark parity; separate data availability from SEO severity; review remaining auth behavior and confidence semantics. | `gsc_report.py:90-147,204-223`; HTML omits overview/benchmarks. `gsc_audit.py:573-575` reduces confidence for any High search finding, including real traffic decline. [Inspection reference][inspection]. | 2 days | Confidence meaning and presentation are product choices; preserve current semantics apart from explicit worker failures. |
 
 ## Later
 
@@ -131,7 +133,7 @@ needs a mocked regression test. Features follow the fixes.
 | Tranco | The [site][tranco] still advertises `https://tranco-list.eu/top-1m.csv.zip`; daily list, locally refreshed weekly. Alexa is no longer an input. | Public download documented. Provider attributions include CC BY, CC BY-SA and Cloudflare CC BY-NC; do not describe this as unrestricted commercial data or relicense downloaded lists as MIT. Commercial redistribution permission is unresolved. No list was downloaded or vendored. |
 | Open PageRank | Old documentation redirects to [new docs][opr-docs]: POST `https://openpagerank.keywordseverywhere.com/v1/domains/bulk`, Bearer OPR key, up to 100 domains. Code still calls legacy GET. | [Free plan][opr]: 30,000 domains/month; docs show 60 requests/minute and budget headers. [Terms][opr-terms] allow service use within plan limits; scores are proprietary and informational. New authenticated API and old endpoint compatibility not tested. |
 | Mozilla Observatory | [Official FAQ][observatory] documents POST `https://observatory-api.mdn.mozilla.net/api/v2/scan`, not `/analyze`; response is synchronous, scan cooldown 60 seconds. Old service retired October 2024. | [Upstream][observatory-code] explicitly offers API integration. [Mozilla terms][mozilla-terms] apply; scan histories are public. No blanket commercial SLA inferred and no scan triggered. |
-| SSL Labs | [v3 reference][ssl-api] still documents `https://api.ssllabs.com/api/v3/analyze`; no evidence this URL is retired. v4 is a separate migration, not necessary merely because it exists. | [Terms][ssl-terms] permit noncommercial OSS integration subject to notices and owner authorization; commercial/public-site use requires permission. Code currently omits the info-call messages required by those terms. No assessment triggered; live v3 availability could not be verified with the web tool. |
+| SSL Labs | [v3 reference][ssl-api] still documents `https://api.ssllabs.com/api/v3/analyze`; no evidence this URL is retired. v4 is a separate migration, not necessary merely because it exists. | [Terms][ssl-terms] permit noncommercial OSS integration subject to notices and owner authorization; commercial/public-site use requires permission. Baseline code omitted the info-call messages required by those terms; N3 adds them. No assessment triggered; live v3 availability could not be verified with the web tool. |
 
 ### Benchmarks and structured data
 
@@ -169,13 +171,16 @@ needs a mocked regression test. Features follow the fixes.
 AGENTS.md is the shared guide; CLAUDE.md and GEMINI.md deliberately refer
 to it rather than duplicate it. Keep all three and update them together
 when CLI behavior changes. Confirmed drift: README's prompt warning;
-PSI skill/agent promises raw CLI data which is dropped; SETUP calls `/gsc
+PSI skill/agent promised raw CLI data which was dropped; SETUP calls `/gsc
 audit` LLM-driven despite the skill invoking the deterministic script;
 the router omits site CRUD from its routing table; the overview agent says
 HEAD while the script uses GET; audit docs say a missing property hard-fails
 but code continues with a Critical finding. `hooks/hooks.json` is empty,
-so hooks do not enforce any safety promise. Correct these docs with the
-matching changes. Per-skill version metadata is historical, not the package
+so hooks do not enforce any safety promise. These docs were corrected with the matching changes. Inspection guidance
+also now distinguishes response fields, marks mobile usability deprecated,
+and avoids claiming the API performs live-URL tests; see the
+[inspect method][inspect-method]. SECURITY.md now describes actual cache
+scrubbing limits instead of promising universal anonymization. Per-skill version metadata is historical, not the package
 version; no version bump in this pass.
 
 Open questions left unchanged: should missing-property audits stop or retain
@@ -231,3 +236,36 @@ for a particular downstream deployment is made.
 [python-toolkit]: https://github.com/joshcarty/google-searchconsole
 [better-mcp]: https://github.com/houtini-ai/better-search-console
 [cross-product]: https://github.com/mario-hernandez/google-seo-mcp-claude-code
+
+[inspect-method]: https://developers.google.com/webmaster-tools/v1/urlInspection.index/inspect
+
+## Completion record
+
+All Now items are implemented. No Next or Later project-shape proposals were
+built. The implementation commits are listed in [verification](VERIFICATION.md).
+
+| Item | Implementation commits |
+| --- | --- |
+| N1 | `852406b` |
+| N2 | `b13e7fc` |
+| N3 | `07dba00`, `39b9952` |
+| N4 | `7da3a6d`, `9d18d4a`, `653597c`, review correction `cbda76c` |
+| N5 | `e1196c6` |
+| N6 | `310bc05` |
+| N7 | `0b88860` |
+| N8 | `1330183`, `bf60e33` |
+| N9 | `240cb2a`, `cd2132b` |
+| Remaining documentation drift | `7707936` |
+
+Final local checks: Ruff passed; 265 mocked tests passed; version consistency,
+sdist/wheel build and `twine check` passed. All commits were preceded by these
+checks. This is a Windows/Python 3.12 result, not an Ubuntu matrix result.
+Version remains 0.2.2. No push, PR, tag or publication was performed.
+
+Remaining verification limits: legacy Open PageRank availability and key
+compatibility; live v3 SSL Labs availability and assessment behavior; actual
+project quota balances and Google auth scope/quota attribution; PSI CLS field
+units; original CTR composite provenance; and commercial redistribution of
+Tranco inputs. Published terms were reviewed, but permission for any particular
+commercial deployment was not established. External scans and authenticated
+queries were not exercised, and credentials were not accessed.
