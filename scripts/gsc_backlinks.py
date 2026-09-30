@@ -73,7 +73,11 @@ def query_open_pagerank(domains: list[str], api_key: str | None = None) -> dict:
     if not domains:
         return {"error": "no_domains"}
 
-    qs_parts = [("domains[]", d) for d in domains[:100]]
+    if len(domains) > 100:
+        return {"error": "too_many_domains", "limit": 100,
+                "message": "Request at most 100 domains explicitly; no domains were sent."}
+
+    qs_parts = [("domains[]", d) for d in domains]
     url = f"{OPENPAGERANK_URL}?{urllib.parse.urlencode(qs_parts)}"
     req = urllib.request.Request(
         url,
@@ -175,13 +179,13 @@ def tranco_rank(domain: str) -> int | None:
 
 # ---------- High-level helpers ----------
 
-def domain_authority(domain: str) -> dict:
+def domain_authority(domain: str, api_key: str | None = None) -> dict:
     """Single-domain lookup that combines both data sources."""
     domain = _strip_scheme(domain)
     out: dict = {"domain": domain}
     out["tranco_rank"] = tranco_rank(domain)
     out["tranco_band"] = _tranco_band(out["tranco_rank"])
-    opr = query_open_pagerank([domain])
+    opr = query_open_pagerank([domain], api_key=api_key)
     if "error" not in opr:
         result = opr["results"].get(domain) or {}
         out["open_pagerank"] = result
@@ -192,13 +196,13 @@ def domain_authority(domain: str) -> dict:
     return out
 
 
-def compare_domains(domains: list[str]) -> dict:
+def compare_domains(domains: list[str], api_key: str | None = None) -> dict:
     """Compare a list of domains. The first entry is treated as the
     "primary" (your site); the rest are competitors."""
     domains = [_strip_scheme(d) for d in domains]
     out: dict = {"primary": domains[0] if domains else None, "rows": []}
 
-    opr = query_open_pagerank(domains)
+    opr = query_open_pagerank(domains, api_key=api_key)
     opr_results = opr.get("results", {}) if "error" not in opr else {}
     if "error" in opr:
         out["open_pagerank_error"] = opr["error"]
@@ -250,11 +254,9 @@ def main():
                    "tranco_band": _tranco_band(rank)}
         elif args.compare:
             doms = [d.strip() for d in args.compare.split(",") if d.strip()]
-            out = compare_domains(doms)
+            out = compare_domains(doms, api_key=args.api_key)
         elif args.domain:
-            if args.api_key:
-                os.environ["OPENPAGERANK_API_KEY"] = args.api_key
-            out = domain_authority(args.domain)
+            out = domain_authority(args.domain, api_key=args.api_key)
         else:
             parser.print_help()
             return 1

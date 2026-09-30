@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Honor the Open PageRank key override in comparison mode without mutating the environment, and reject requests over 100 domains instead of silently truncating them.
+
 - Fix the position-20 CTR lookup and disclose the curve's unverified heuristic basis. Separate FCP/TTFB diagnostics from Core Web Vitals in the metric list and remove unsupported CTR outcome claims.
 
 - Correct structured-data field requirements, mark retired and unchecked types, count invalid JSON, and separate failed fetches from markup coverage. Local verdicts no longer claim Google rich-result eligibility.
