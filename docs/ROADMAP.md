@@ -10,6 +10,109 @@ documentation, and unverified live behavior. Baseline file/line references
 refer to `5251dd6`, so they remain useful after fixes move the code.
 Effort is approximate developer time including tests and documentation.
 
+## Current disposition — 2026-10-01
+
+Continued from `051b59a` on `roadmap-work` at the owner's request to cover the
+remaining roadmap. All Now work remains complete. The bounded Next changes
+below are implemented. A proposal or unresolved verification item is not
+counted as implemented. The original instruction to leave large/project-shape
+changes as proposals still governs the contextual rule engine and Later work.
+No new service, paid dependency, bulk inspection or write bypass was added.
+
+| Roadmap item | Disposition and implementation evidence | Remaining limitation |
+| --- | --- | --- |
+| Search windows and hourly data | Implemented: `d7920c5`, `385f278`; `scripts/gsc_data.py:162,179`. Explicit PT windows, hour/partial metadata, adjacent aggregate comparisons. | Aggregate queries cannot establish daily coverage; use time-series coverage for recent windows. GSC top-row limits remain. |
+| Open PageRank migration | Implemented: `26ca953`, `612956a`; `scripts/gsc_backlinks.py:59`. New host, POST/Bearer, separately configured OPR key, host scores and quota diagnostics. | Current [migration docs][opr-docs] explicitly retire old DomCop keys. This resolves the earlier key-compatibility question at the documentation level; live new-key access remains untested. |
+| Context-aware rich results | Reviewed; retained as a substantial proposal. See the design below and current [product snippets][product], [merchant listings][merchant], [reviews][reviews], [jobs][jobs] and [breadcrumbs][breadcrumbs]. | Current verdicts stay limited/unchecked. A flat field list cannot implement profile, parent and graph rules reliably. |
+| Read transport and quota diagnostics | Implemented: `da27fa7`; `scripts/gsc_utils.py:207,224`. Explicit socket timeout, one bounded eligible-read retry, status/reason/retry-hint output. | No write/inspection retry or quota ledger. Existing Google client already had a default timeout; this makes policy explicit, not a previously proven infinite-timeout fix. |
+| Cache privacy and consistency | Reviewed and bounded improvements implemented: prior cache commits plus `2d5876a`, `c532dc6`. Tranco replacement/reload and display-copy redaction. See privacy contract below. | Raw cache contents, historical cleanup and cross-process in-flight coordination are not redesigned or claimed anonymous. |
+| Sampling and trend validity | Implemented: `27d070d`, `d3c1504`; `scripts/gsc_audit.py:183`, `scripts/gsc_structured_data.py:234`. Equal calendar windows, missing-day disclosure, bounded XML discovery, stable samples. | Discovery remains relative to the supplied property path; host-root discovery is not silently substituted. Samples are non-exhaustive. |
+| PSI units and authentication | Reviewed; quota header loss fixed in `4eb3c21` using credential `apply()`. `scripts/gsc_psi.py:35`, `scripts/gsc_crux.py:41`; [google-auth contract][auth-headers]. | Current [PSI reference][psi-reference] did not establish CLS scaling. Unit behavior unchanged. Project enablement, permissions and OAuth scope compatibility need credentialed operator verification. |
+| More CrUX diagnostics | Implemented: `44f5d44`; `scripts/gsc_crux.py:162`. Optional complete metric objects for snapshot/history, including distributions and missing periods. | Metric availability varies; diagnostic values have no invented CWV thresholds. [CrUX contract][crux-api]. |
+| Reports and instructions | Implemented: `a72e24e`, `dc2f4ba`, `3ff157d`; `scripts/gsc_report.py:210`. Context/benchmark/source parity, availability-based confidence, invalid-metric handling. Runtime files and affected agents/skills updated together. | Confidence is a convention, not statistical certainty. PDF delegation is mocked; native PDF layout was not visually verified. |
+| Read-only MCP facade | Proposal retained, with acceptance criteria below. | New distribution/auth lifecycle; excluded by the original project-shape limit. |
+| Bounded export and local history | Proposal retained. Explicit one-page offsets and aggregate comparisons are available now. | Persistence, retention and pagination completeness require a separate design. |
+| Property-specific CTR reference | Proposal retained. | Requires statistical validation, cohort choices and minimum sample policy; no invented universal replacement curve. |
+| Cross-product analysis | Proposal retained. | GA4 scopes, joins and attribution change the toolkit's scope. |
+
+Validation: baseline 296 tests, final 359 tests; Ruff, version consistency,
+build, Twine and whitespace checks passed. See [verification](VERIFICATION.md)
+for commits and limits. The original planning tables and research below are
+preserved as historical evidence; this disposition supersedes their pending
+statuses where a change is implemented.
+
+### Concrete proposals not built
+
+These are proposed acceptance criteria, not shipped capabilities. Original
+rough efforts and risks remain in the Next/Later tables.
+
+- **Contextual schema engine (4-7 days):** introduce named profiles such as
+  product snippet and merchant listing. Rule output should include the profile,
+  rule identifier, JSON path, source URL/review date and unchecked conditions.
+  Resolve local `@id` graph references with cycle/depth bounds; never fetch a
+  remote context/reference. Evaluate alternatives, all applicable list members,
+  parent types and remote-job conditions. Use synthetic positive/negative
+  fixtures for each documented alternative, mixed-type nodes, dangling IDs and
+  cycles. Keep editorial/content eligibility and Google's display decision
+  explicitly unchecked. Do not promote a presence check to eligibility.
+- **MCP facade (about one week):** optional dependency and read-only stdio tools
+  that call the Python adapters directly. Initially exclude site/sitemap writes
+  and URL Inspection. Define process-local auth/cache lifecycle, structured
+  errors and per-call limits. Acceptance requires protocol tests, parity with
+  adapter output, no credentials in responses and no background crawling.
+  Existing comparator evidence: [AminForou][mcp], [AkashRajpurohit][mcp-compare].
+- **Export/history (about one week):** separately opt-in local storage with
+  explicit property, dates, row/request caps, stop reason, schema version,
+  aggregation type and collection timestamp. Distinguish an exhausted page
+  sequence from a complete GSC dataset. Design retention/deletion before storing
+  raw queries; never derive weighted CTR/position from averages without their
+  denominators. Test caps, empty pages, failures and resumable provenance.
+  Evidence: [query limits][query], [Python toolkit][python-toolkit],
+  [better-search-console][better-mcp].
+- **Property CTR reference (about one week):** user-selected cohorts by device,
+  country, brand and search type; sufficient impressions/queries, uncertainty
+  intervals and held-out validation. Preserve aggregation and privacy caveats.
+  Return insufficient evidence rather than a curve for sparse cohorts. Validate
+  on synthetic data before optional user-owned datasets. Publisher differences
+  remain documented in [FPS][fps], [Backlinko][backlinko] and [Sistrix][sistrix].
+- **GSC/GA4 joins (two or more weeks):** separate read-only integration proposal
+  specifying scopes, canonical/landing-page mapping, timezone reconciliation,
+  attribution and consent-related missingness. Never equate Search Console
+  clicks with GA4 sessions. Test mappings and coverage before causal claims.
+  Comparator: [Google SEO MCP][cross-product].
+
+### Privacy and cache contract
+
+Exact request inputs and hashed cache identity remain distinct from display
+copies. Search Analytics continues its existing pre-cache scrub. PSI raw
+Lighthouse data, inspection and other raw payloads stay private source data;
+rewriting them universally would lose diagnostic fidelity and can change URL
+identity. `--redact` is a separate, best-effort report operation after retrieval,
+not a cache scrub, de-identification guarantee or safe-to-publish assertion.
+No existing user cache or credential file was inspected during this review.
+
+Historical cleanup remains a proposal (roughly 1-2 days): a manifest/dry-run of
+known cache entries, explicit deletion scope, no symlink traversal, no credential
+paths and mocked temporary-directory tests before any destructive command.
+Cross-process ordering remains a proposal (roughly 2-3 days): choose a lock or
+generation scheme, then test a read racing with successful invalidation. Atomic
+replacement prevents partial files but does not establish that ordering.
+Neither change is necessary to use the current bounded adapters safely within
+their documented cache contract.
+
+### Verification still unavailable
+
+No live Google API request, third-party scan or authenticated OPR request was
+made. Remaining unknowns are actual quota balances, account scopes/permissions,
+new OPR key acceptance, live SSL Labs v3 behavior, PSI field CLS units, the
+original CTR composite derivation and Tranco commercial redistribution rights.
+The Ubuntu/Python 3.10-3.13 CI matrix and native PDF layout were not run locally.
+These are open verification items, not completed tasks or inferred failures.
+
+[merchant]: https://developers.google.com/search/docs/appearance/structured-data/merchant-listing
+[auth-headers]: https://google-auth.readthedocs.io/en/latest/reference/google.auth.credentials.html#google.auth.credentials.Credentials.apply
+[google-http]: https://googleapis.github.io/google-api-python-client/docs/epy/googleapiclient.http-module.html
+
 ## Baseline
 
 - Clean checkout on `master`; created `roadmap-work` from `5251dd6`.
@@ -90,7 +193,10 @@ header-failure findings introduced by the combined-source error reporting.
   of ranking loss: [Google's page-experience guidance][page-experience] and
   the limited local parser do not support that conclusion.
 
-## Upstream review
+## Upstream review — initial 2026-09-30 evidence
+
+Current implementation and the 2026-10-01 OPR migration clarification are
+recorded above. This section preserves the initial comparison.
 
 ### Google APIs
 
@@ -184,8 +290,7 @@ scrubbing limits instead of promising universal anonymization. Per-skill version
 version; no version bump in this pass.
 
 Open questions left unchanged: should missing-property audits stop or retain
-public checks; should confidence describe availability rather than severity;
-should prefix properties sample `/sitemap.xml` under their path or the host
+public checks; should prefix properties sample `/sitemap.xml` under their path or the host
 root; should security checks run for commercially operated client audits
 under separately obtained SSL Labs permission? No assumption of permission
 for a particular downstream deployment is made.

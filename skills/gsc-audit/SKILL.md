@@ -29,7 +29,7 @@ metadata:
 
 - **Site overview**: permission level, registered sitemap count + last submission, homepage HTTP probe (framework / platform hints)
 - **Search analytics**: top 50 queries, top 50 pages, device + country splits, at least 90 days of time-series with an equal-calendar-period clicks delta
-- **CTR-vs-position curve**: queries with weak CTR for their average rank (usually a title / meta-description fix)
+- **CTR-vs-position curve**: queries with weak CTR for their average rank (a hypothesis to investigate, not proof of a title defect)
 - **Sitemap health**: error and warning counts per registered sitemap
 - **Core Web Vitals**: CrUX origin snapshot for LCP / INP / CLS / FCP / TTFB classified against Google's official good / needs-improvement / poor bands; optional 25-week history
 - **URL inspection**: stubbed in the audit driver because it is quota-heavy. Run `/gsc inspect <site> <url>` for a deep dive.

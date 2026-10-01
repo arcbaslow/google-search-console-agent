@@ -4,7 +4,7 @@
 
 1. Start from a clean checkout of the intended release commit.
 2. Update `pyproject.toml` and `.claude-plugin/plugin.json` together, and add a dated entry to `CHANGELOG.md`.
-3. Update `docs/RELEASE_NOTES.md`, refresh affected examples/screenshots and run every check in the README. For Google Ads, include the separate webapp suite; for GA4, include coverage, format and mypy.
+3. Update `docs/RELEASE_NOTES.md`, refresh affected examples/screenshots and run every check in the README.
 4. Build and inspect the artifacts. Run the documented offline example against the source you are releasing.
 
 ```bash

@@ -95,7 +95,13 @@ python scripts/gsc_psi.py --url https://example.com/pricing --strategy mobile --
 
 Use `gsc_data.py --start-row N` for one explicit Search Analytics page and
 `gsc_psi.py --raw` to include complete Lighthouse diagnostics. Neither flag
-adds an automatic fetch loop.
+adds automatic pagination.
+
+Search Analytics also accepts inclusive PT `--start-date` / `--end-date`
+windows, `--compare-previous` for aggregate comparisons, and hourly custom
+reports with `--dimensions hour --data-state hourly_all`. CrUX `--diagnostics`
+retains metric distributions and subparts. Audit/report `--redact` applies
+best-effort display redaction; review the result before sharing.
 
 For optional domain and page-experience checks:
 
