@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add explicit PT date ranges, hourly Search Analytics with partial-data metadata, and equal-period aggregate comparisons.
+
 - Parse sitemap namespaces and entities, deduplicate URLs, make samples repeatable and disclose bounded discovery coverage and errors.
 
 - Include site context, summaries, benchmark verdicts and source data in HTML/PDF reports; escape supplied HTML values and remove remote font loading.
