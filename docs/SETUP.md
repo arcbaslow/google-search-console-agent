@@ -381,3 +381,19 @@ property path and follows at most five child files total, one level deep.
 DTD/custom entities are rejected. Only URLs within the supplied property are
 sampled. `sampling` reports discovered/excluded counts, requests and errors;
 it is explicitly non-exhaustive. Fetch coverage remains in `rollup`.
+
+## Explicit dates and fresh search data
+
+`gsc_data.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD` uses inclusive
+Search Console PT dates and overrides `--days`. Without explicit dates the
+existing three-day lag remains; `--data-state all` alone does not remove it.
+Hourly custom reports require `--dimensions hour --data-state hourly_all`
+and both dates. Google limits hourly availability; incomplete-data metadata
+is retained verbatim under `metadata`, with `date_timezone` identifying PT.
+Missing dates are not zero-filled. Offsets still fetch only one page.
+
+`--compare-previous` is a standalone mode requiring both dates. It makes two
+aggregate queries for adjacent equal periods, returning click/impression
+percentage changes, CTR percentage-point change and position difference.
+It never sums top rows. Zero baselines give null percentages; non-final data
+suppresses differences. Freshness and seasonality still need interpretation.

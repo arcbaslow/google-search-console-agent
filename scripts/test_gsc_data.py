@@ -160,3 +160,64 @@ def test_clean_cached_query_does_not_extend_its_lifetime(monkeypatch):
     monkeypatch.setattr(gsc_data, "cache_set", write)
     assert gsc_data.query("example.com", dimensions=["query"]) == cached
     write.assert_not_called()
+
+@pytest.mark.parametrize("kw", [
+    {"start_date": "2026-01-01"}, {"days": 0},
+    {"start_date": "2026-02-30", "end_date": "2026-03-01"},
+    {"start_date": "2026-02-02", "end_date": "2026-02-01"},
+    {"start_date": "20260101", "end_date": "2026-01-02"},
+    {"dimensions": ["hour"]}, {"data_state": "hourly_all"},
+    {"dimensions": ["hour"], "data_state": "hourly_all"},
+    {"dimensions": ["query", "query"]},
+])
+def test_date_and_hour_validation_before_auth(monkeypatch, kw):
+    monkeypatch.setattr(gsc_data, "_get_service", lambda: pytest.fail("no auth"))
+    with pytest.raises(ValueError):
+        gsc_data.query("example.com", **kw)
+
+
+def test_hourly_request_preserves_partial_metadata_and_offset(monkeypatch):
+    service = MagicMock()
+    metadata = {"first_incomplete_hour": "2026-10-01T02:00:00-07:00"}
+    service.searchanalytics().query().execute.return_value = {
+        "rows": [{"keys": ["2026-10-01T02:00:00-07:00"], "clicks": 2}], "metadata": metadata}
+    monkeypatch.setattr(gsc_data, "_get_service", lambda: service)
+    out = gsc_data.query("example.com", dimensions=["hour"], data_state="hourly_all",
+                         start_date="2026-10-01", end_date="2026-10-01")
+    body = service.searchanalytics.return_value.query.call_args.kwargs["body"]
+    assert body["startDate"] == body["endDate"] == "2026-10-01"
+    assert body["dimensions"] == ["hour"]
+    assert out["metadata"] == metadata
+    assert out["rows"][0]["hour"] == "2026-10-01T02:00:00-07:00"
+
+
+def test_explicit_timeseries_sizes_rows_for_date_range(monkeypatch):
+    query = MagicMock(return_value={})
+    monkeypatch.setattr(gsc_data, "query", query)
+    gsc_data.time_series("example.com", start_date="2026-01-01", end_date="2026-03-31")
+    assert query.call_args.kwargs["row_limit"] == 95
+
+
+def test_paired_comparison_uses_two_aggregate_requests(monkeypatch):
+    service = MagicMock()
+    execute = service.searchanalytics.return_value.query.return_value.execute
+    execute.side_effect = [{"rows": [{"clicks": 12, "impressions": 100, "ctr": .12, "position": 2}]},
+                           {"rows": [{"clicks": 10, "impressions": 100, "ctr": .1, "position": 3}]}]
+    monkeypatch.setattr(gsc_data, "_get_service", lambda: service)
+    out = gsc_data.compare_periods("example.com", "2026-03-01", "2026-03-07")
+    assert out["previous"]["start_date"] == "2026-02-22"
+    assert out["previous"]["end_date"] == "2026-02-28"
+    assert out["changes"]["clicks_change_pct"] == 20
+    assert out["changes"]["ctr_change_percentage_points"] == 2
+    assert out["changes"]["position_change"] == -1
+    assert execute.call_count == 2
+
+
+def test_cli_explicit_dates_and_comparison(monkeypatch, capsys):
+    query = MagicMock(return_value={"rows": [{"clicks": 0, "impressions": 0, "ctr": 0, "position": 0}]})
+    monkeypatch.setattr(gsc_data, "query", query)
+    monkeypatch.setattr("sys.argv", ["gsc_data", "--site", "example.com", "--compare-previous",
+        "--start-date", "2026-01-01", "--end-date", "2026-01-07"])
+    assert gsc_data.main() == 0
+    assert query.call_count == 2
+    assert '"clicks_change_pct": null' in capsys.readouterr().out
