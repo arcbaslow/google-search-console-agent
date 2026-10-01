@@ -38,7 +38,7 @@ FORM_FACTORS = ("PHONE", "DESKTOP", "TABLET", "ALL_FORM_FACTORS")
 FETCH_TIMEOUT_SECONDS = 30
 
 
-def _bearer_token() -> str:
+def _auth_headers() -> dict[str, str]:
     creds = get_credentials(write=False)
     if not getattr(creds, "token", None) or getattr(creds, "expired", False):
         from google.auth.transport.requests import Request
@@ -46,7 +46,9 @@ def _bearer_token() -> str:
     token = getattr(creds, "token", None)
     if not token:
         raise RuntimeError("Could not obtain access token from credentials")
-    return token
+    headers = {}
+    creds.apply(headers)
+    return headers
 
 
 def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -54,7 +56,7 @@ def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
         endpoint,
         data=json.dumps(body).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {_bearer_token()}",
+            **_auth_headers(),
             "Content-Type": "application/json",
             "Accept": "application/json",
         },

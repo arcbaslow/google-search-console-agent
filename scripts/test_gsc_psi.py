@@ -33,7 +33,7 @@ def psi_http(monkeypatch):
     response.read.return_value = json.dumps(payload).encode()
     opener = MagicMock(return_value=response)
     monkeypatch.setattr(gsc_psi.urllib.request, "urlopen", opener)
-    monkeypatch.setattr(gsc_psi, "_bearer_token", lambda: "synthetic-token")
+    monkeypatch.setattr(gsc_psi, "_auth_headers", lambda: {"Authorization": "Bearer synthetic-token"})
     return opener, payload
 
 
@@ -100,7 +100,7 @@ def test_transport_timeout_is_not_retried(psi_http):
 
 def test_invalid_strategy_does_not_authenticate(monkeypatch):
     token = MagicMock(side_effect=AssertionError("no authentication"))
-    monkeypatch.setattr(gsc_psi, "_bearer_token", token)
+    monkeypatch.setattr(gsc_psi, "_auth_headers", token)
     with pytest.raises(ValueError):
         gsc_psi.run_psi("https://example.com", strategy="tablet")
     token.assert_not_called()
@@ -130,10 +130,11 @@ def test_cli_failure_is_json_on_stderr(monkeypatch, capsys):
 
 def test_token_refresh_stays_in_memory(monkeypatch):
     creds = SimpleNamespace(token=None, expired=True)
+    creds.apply = lambda headers: headers.update(Authorization=f"Bearer {creds.token}")
     creds.refresh = MagicMock(side_effect=lambda request: setattr(creds, "token", "refreshed-test-token"))
     get = MagicMock(return_value=creds)
     monkeypatch.setattr(gsc_psi, "get_credentials", get)
-    assert gsc_psi._bearer_token() == "refreshed-test-token"
+    assert gsc_psi._auth_headers()["Authorization"] == "Bearer refreshed-test-token"
     get.assert_called_once_with(write=False)
     creds.refresh.assert_called_once()
 
@@ -142,4 +143,16 @@ def test_missing_token_reports_auth_failure(monkeypatch):
     creds = SimpleNamespace(token=None, expired=True, refresh=MagicMock())
     monkeypatch.setattr(gsc_psi, "get_credentials", lambda **kw: creds)
     with pytest.raises(RuntimeError, match="access token"):
-        gsc_psi._bearer_token()
+        gsc_psi._auth_headers()
+
+@pytest.mark.parametrize("module_name", ["gsc_psi", "gsc_crux"])
+def test_google_quota_project_headers_are_applied_without_disk(monkeypatch, module_name):
+    import importlib
+
+    from google.oauth2.credentials import Credentials
+    module = importlib.import_module(module_name)
+    credentials = Credentials(token="synthetic", quota_project_id="synthetic-project")
+    monkeypatch.setattr(module, "get_credentials", lambda **kw: credentials)
+    headers = module._auth_headers()
+    assert headers["authorization"] == "Bearer synthetic"
+    assert headers["x-goog-user-project"] == "synthetic-project"

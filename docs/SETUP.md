@@ -437,3 +437,12 @@ Writes and URL Inspection never use the read retry policy. Authentication
 401 replay is disabled on the Google transport; refresh happens before sending
 when needed. These socket timeouts are not total wall-time guarantees. Quotas
 are shared with other clients; the toolkit does not estimate remaining GSC quota.
+
+## PSI and CrUX quota attribution
+
+PSI and CrUX apply the credential object's authentication headers, including
+`x-goog-user-project` when a quota project is configured. Token refresh stays
+in memory. This repairs omitted quota attribution; it does not enable APIs,
+grant project permissions or prove OAuth scope compatibility. Live scope and
+project verification remains an operator task. PSI field CLS scaling remains
+unmodified pending an authoritative unit contract.

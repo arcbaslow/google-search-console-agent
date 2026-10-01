@@ -32,7 +32,7 @@ DEFAULT_CATEGORIES = ("performance", "seo", "accessibility", "best-practices")
 FETCH_TIMEOUT_SECONDS = 60
 
 
-def _bearer_token() -> str:
+def _auth_headers() -> dict[str, str]:
     creds = get_credentials(write=False)
     # google-auth Credentials may need a refresh before .token is populated
     if not getattr(creds, "token", None) or getattr(creds, "expired", False):
@@ -41,7 +41,9 @@ def _bearer_token() -> str:
     token = getattr(creds, "token", None)
     if not token:
         raise RuntimeError("Could not obtain access token from credentials")
-    return token
+    headers = {}
+    creds.apply(headers)
+    return headers
 
 
 def run_psi(url: str, strategy: str = "mobile",
@@ -67,7 +69,7 @@ def run_psi(url: str, strategy: str = "mobile",
     full = f"{PSI_ENDPOINT}?{urllib.parse.urlencode(qs)}"
 
     req = urllib.request.Request(full, headers={
-        "Authorization": f"Bearer {_bearer_token()}",
+        **_auth_headers(),
         "Accept": "application/json",
     })
     try:

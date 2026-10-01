@@ -64,7 +64,7 @@ def test_snapshot_numeric_cls_and_absent_metrics():
 
 
 def test_post_uses_json_bearer_and_timeout(monkeypatch):
-    monkeypatch.setattr(gsc_crux, "_bearer_token", lambda: "synthetic")
+    monkeypatch.setattr(gsc_crux, "_auth_headers", lambda: {"Authorization": "Bearer synthetic"})
     response = MagicMock()
     response.__enter__.return_value = response
     response.read.return_value = b'{"record":{}}'
@@ -81,7 +81,7 @@ def test_post_uses_json_bearer_and_timeout(monkeypatch):
 
 @pytest.mark.parametrize("status", [403, 429, 500])
 def test_post_errors_are_not_retried(monkeypatch, status):
-    monkeypatch.setattr(gsc_crux, "_bearer_token", lambda: "synthetic")
+    monkeypatch.setattr(gsc_crux, "_auth_headers", lambda: {"Authorization": "Bearer synthetic"})
     fetch = MagicMock(side_effect=urllib.error.HTTPError(
         "url", status, "error", {}, io.BytesIO(b'{"error":"unavailable"}')))
     monkeypatch.setattr("urllib.request.urlopen", fetch)
@@ -91,7 +91,7 @@ def test_post_errors_are_not_retried(monkeypatch, status):
 
 
 def test_no_data_is_cached_and_no_cache_bypasses_it(monkeypatch):
-    monkeypatch.setattr(gsc_crux, "_bearer_token", lambda: "synthetic")
+    monkeypatch.setattr(gsc_crux, "_auth_headers", lambda: {"Authorization": "Bearer synthetic"})
     fetch = MagicMock(side_effect=lambda *a, **kw: (_ for _ in ()).throw(
         urllib.error.HTTPError("url", 404, "absent", {}, io.BytesIO(b"no data"))))
     monkeypatch.setattr("urllib.request.urlopen", fetch)
