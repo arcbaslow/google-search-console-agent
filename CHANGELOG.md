@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Apply Google credential headers to PSI and CrUX so configured quota-project attribution is preserved.
+
 - Set explicit Google socket timeouts, add bounded retries for eligible reads, and expose quota/access diagnostics without retrying writes or URL Inspection.
 
 - Expose optional CrUX distributions, LCP subparts and other available metrics with --diagnostics for snapshots and history.
