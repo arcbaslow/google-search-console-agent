@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Replace Tranco CSV caches atomically, reject malformed downloads, and refresh the in-memory index after file changes.
+
 - Apply Google credential headers to PSI and CrUX so configured quota-project attribution is preserved.
 
 - Set explicit Google socket timeouts, add bounded retries for eligible reads, and expose quota/access diagnostics without retrying writes or URL Inspection.

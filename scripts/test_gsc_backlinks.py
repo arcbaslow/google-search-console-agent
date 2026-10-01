@@ -226,3 +226,43 @@ def test_opr_quota_error_exposes_retry_hint_without_retry(monkeypatch):
     assert out["error_type"] == "quota_error"
     assert out["retry_after"] == "60"
     fetch.assert_called_once()
+
+def test_tranco_replacement_failure_retains_old_csv(monkeypatch, tmp_path):
+    import io
+    import zipfile
+
+    import pytest
+    path = tmp_path / "tranco.csv"
+    path.write_text("1,old.example\n")
+    monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", path)
+    monkeypatch.setattr(gsc_backlinks, "TRANCO_REFRESH_SECONDS", -1)
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w") as z:
+        z.writestr("top.csv", "2,new.example\n")
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.read.return_value = archive.getvalue()
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: response)
+    monkeypatch.setattr(gsc_backlinks.os, "replace", MagicMock(side_effect=PermissionError("locked")))
+    with pytest.raises(PermissionError):
+        gsc_backlinks._ensure_tranco_cache()
+    assert path.read_text() == "1,old.example\n"
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_tranco_memory_cache_reloads_changed_file(monkeypatch, tmp_path):
+    path = tmp_path / "tranco.csv"
+    path.write_text("1,example.com\n")
+    monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", path)
+    monkeypatch.setattr(gsc_backlinks, "_ensure_tranco_cache", lambda: None)
+    assert gsc_backlinks.tranco_rank("example.com") == 1
+    path.write_text("200,example.com\n")
+    assert gsc_backlinks.tranco_rank("example.com") == 200
+
+
+def test_empty_tranco_file_is_unavailable_not_outside_list(monkeypatch, tmp_path):
+    path = tmp_path / "tranco.csv"
+    path.write_text("")
+    monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", path)
+    monkeypatch.setattr(gsc_backlinks, "_ensure_tranco_cache", lambda: None)
+    assert gsc_backlinks._tranco_rows(["example.com"])[0]["tranco_band"] == "unavailable"

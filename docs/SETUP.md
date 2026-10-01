@@ -446,3 +446,12 @@ in memory. This repairs omitted quota attribution; it does not enable APIs,
 grant project permissions or prove OAuth scope compatibility. Live scope and
 project verification remains an operator task. PSI field CLS scaling remains
 unmodified pending an authoritative unit contract.
+
+## Tranco cache consistency
+
+Tranco downloads are size-bounded (50 MB archive, 100 MB CSV), checked for
+valid nonempty rank rows, and atomically replace the previous CSV. Failed
+replacement preserves the old file. The in-memory index reloads when the
+CSV's timestamp or size changes; a corrupt or empty list is unavailable,
+not evidence that a domain ranks outside the list. Weekly refresh is unchanged.
+Independent processes are not locked together and may download concurrently.

@@ -31,6 +31,7 @@ import io
 import json
 import os
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -137,6 +138,7 @@ def _to_float(v):
 # ---------- Tranco ----------
 
 _tranco_dict_cache: dict[str, int] | None = None
+_tranco_signature = None
 
 
 def _ensure_tranco_cache():
@@ -152,32 +154,54 @@ def _ensure_tranco_cache():
         headers={"User-Agent": "google-search-console-agent/0.2 (+tranco-fetch)"},
     )
     with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_SECONDS) as resp:
-        raw = resp.read()
+        raw = resp.read(50_000_001)
+        if len(raw) > 50_000_000:
+            raise ValueError("Tranco archive exceeds 50 MB")
     with zipfile.ZipFile(io.BytesIO(raw)) as z:
         csv_name = next((n for n in z.namelist() if n.endswith(".csv")), None)
         if not csv_name:
             raise RuntimeError("no .csv inside Tranco zip")
+        if z.getinfo(csv_name).file_size > 100_000_000:
+            raise ValueError("Tranco CSV exceeds 100 MB")
         with z.open(csv_name) as f:
-            TRANCO_CACHE.write_bytes(f.read())
+            payload = f.read(100_000_001)
+        if len(payload) > 100_000_000:
+            raise ValueError("Tranco CSV exceeds 100 MB")
+        _parse_tranco(payload.decode("utf-8"))
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=TRANCO_CACHE.parent, prefix=".tranco-",
+                                             suffix=".tmp", delete=False) as output:
+                temporary = Path(output.name)
+                output.write(payload)
+            os.replace(temporary, TRANCO_CACHE)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+
+
+def _parse_tranco(text):
+    out = {}
+    for line in text.splitlines():
+        parts = line.strip().split(",", 1)
+        if len(parts) != 2 or not parts[1] or not parts[0].isdigit() or int(parts[0]) < 1:
+            raise ValueError("invalid Tranco CSV row")
+        out[parts[1].lower()] = int(parts[0])
+    if not out:
+        raise ValueError("empty Tranco CSV")
+    return out
 
 
 def _load_tranco_dict() -> dict[str, int]:
-    global _tranco_dict_cache
-    if _tranco_dict_cache is not None:
-        return _tranco_dict_cache
+    global _tranco_dict_cache, _tranco_signature
     _ensure_tranco_cache()
-    out: dict[str, int] = {}
-    with open(TRANCO_CACHE, encoding="utf-8") as f:
-        for line in f:
-            parts = line.strip().split(",", 1)
-            if len(parts) != 2:
-                continue
-            rank_s, dom = parts
-            try:
-                out[dom.lower()] = int(rank_s)
-            except ValueError:
-                continue
-    _tranco_dict_cache = out
+    with TRANCO_CACHE.open(encoding="utf-8") as f:
+        stat = os.fstat(f.fileno())
+        signature = (str(TRANCO_CACHE), stat.st_mtime_ns, stat.st_size)
+        if _tranco_dict_cache is not None and _tranco_signature == signature:
+            return _tranco_dict_cache
+        out = _parse_tranco(f.read())
+    _tranco_dict_cache, _tranco_signature = out, signature
     return out
 
 
