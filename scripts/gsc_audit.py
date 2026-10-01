@@ -676,6 +676,7 @@ def main():
     parser.add_argument("--max-queries", type=int, default=30,
                         help="Number of top queries scanned for the CTR-curve check")
     parser.add_argument("--format", choices=("md", "html", "pdf", "json"), default="md")
+    parser.add_argument("--redact", action="store_true", help="Best-effort display redaction after retrieval; caches unchanged")
     parser.add_argument("--output", help="Write report to this path instead of stdout")
     args = parser.parse_args()
 
@@ -702,6 +703,9 @@ def main():
         return 1
 
     site_url_norm = normalize_site_url(args.site)
+    if args.redact:
+        site_url_norm, agents_output, overview = gsc_report.redact_report_inputs(
+            site_url_norm, agents_output, overview)
     body: str | bytes
     if args.format == "json":
         body = json.dumps({

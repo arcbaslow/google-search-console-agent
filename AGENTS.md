@@ -425,3 +425,17 @@ replacement preserves the old file. The in-memory index reloads when the
 CSV's timestamp or size changes; a corrupt or empty list is unavailable,
 not evidence that a domain ranks outside the list. Weekly refresh is unchanged.
 Independent processes are not locked together and may download concurrently.
+
+## Report privacy boundary
+
+`gsc_audit.py --redact` and `gsc_report.py --redact` apply best-effort email,
+phone and denied-key redaction to a copy of report data, including context,
+findings and raw sections, before rendering. Audit JSON is covered too.
+Requests always use the exact original property/URL; display redaction never
+changes a request target or cache identity. Default output remains unchanged.
+
+This is not anonymization: names, arbitrary identifiers, unknown encodings and
+sensitive page content can remain. Review reports before sharing. Existing and
+new adapter caches retain their documented raw-data contracts; this flag does
+not purge or rewrite them. PSI/CrUX/Search Analytics `--no-cache` can avoid
+cache use for targeted calls. Historical cleanup remains a separate proposal.

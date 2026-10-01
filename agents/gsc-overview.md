@@ -105,3 +105,17 @@ source labels and per-agent data, matching the Markdown sections. The audit
 passes its overview to all renderers. HTML escapes supplied values and uses
 local fonts; PDF rendering needs no font download. Reports contain source
 payloads and should be treated as private, regardless of format.
+
+## Report privacy boundary
+
+`gsc_audit.py --redact` and `gsc_report.py --redact` apply best-effort email,
+phone and denied-key redaction to a copy of report data, including context,
+findings and raw sections, before rendering. Audit JSON is covered too.
+Requests always use the exact original property/URL; display redaction never
+changes a request target or cache identity. Default output remains unchanged.
+
+This is not anonymization: names, arbitrary identifiers, unknown encodings and
+sensitive page content can remain. Review reports before sharing. Existing and
+new adapter caches retain their documented raw-data contracts; this flag does
+not purge or rewrite them. PSI/CrUX/Search Analytics `--no-cache` can avoid
+cache use for targeted calls. Historical cleanup remains a separate proposal.
