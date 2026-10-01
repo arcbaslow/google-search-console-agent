@@ -16,7 +16,7 @@ This release makes installation, supported workflows and example output easier t
 
 129 tests passed. Ruff passed.
 
-Local validation used Windows and Python 3.12.14 (Node 24 for GTM Diff). The [verification record](VERIFICATION.md) lists the checks and their scope. The repository's CI matrix provides the other supported runtime/OS checks. No live ad account, analytics property, Figma file, AI call or external account write was used for the examples.
+Local validation used Windows and Python 3.12.14. The [verification record](VERIFICATION.md) lists the checks and their scope. The repository's CI matrix provides the other supported runtime/OS checks. The examples use synthetic Search Console inputs and make no live API calls or external writes.
 
 ## Downloads
 

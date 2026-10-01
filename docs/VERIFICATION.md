@@ -143,3 +143,54 @@ anonymized; no historical cache sweep was added; Tranco uses a separate CSV
 cache; in-flight reads across independent processes can still race with
 invalidation. These limits are recorded in ROADMAP.md rather than presented
 as solved by atomic file replacement.
+
+## Remaining roadmap pass — 2026-10-01
+
+Started on clean `master` at `051b59a` and switched to the existing
+`roadmap-work` branch at that same commit. The earlier branch was already
+merged and pushed at the owner's separate request. This pass implements the
+remaining bounded work and records explicit dispositions for larger proposals
+and unresolved verification, rather than claiming they were all built.
+
+| Check | Start | Final |
+| --- | --- | --- |
+| Ruff | Passed | Passed |
+| Fully mocked pytest suite | 296 passed | 359 passed |
+| Version consistency (0.2.2) | Passed | Passed |
+| sdist/wheel build without isolation | Passed | Passed |
+| Twine artifact validation | Passed | Passed |
+| Whitespace | Passed | Passed |
+
+All checks passed before each final implementation commit. Environment remains
+Windows/Python 3.12.14; the Ubuntu/four-version matrix is not locally verified.
+No dependencies, version, tags or publishing configuration changed. Tests block
+unmocked network and ADC discovery; all new responses, keys and files are
+synthetic. No credential file, existing cache or `.secrets/` was accessed.
+
+| Commit | Change | Tests |
+| --- | --- | --- |
+| `27d070d` | Compare trends over equal calendar periods | 298 |
+| `dc2f4ba` | Base confidence on search availability | 303 |
+| `a72e24e` | Include context and benchmarks in HTML/PDF | 307 |
+| `d3c1504` | Parse bounded sitemap samples as XML | 316 |
+| `d7920c5` | Add explicit dates, hourly data and aggregate comparisons | 329 |
+| `26ca953` | Migrate Open PageRank using new keys | 332 |
+| `44f5d44` | Expose CrUX diagnostic distributions | 335 |
+| `da27fa7` | Bound Google read retries and expose quota diagnostics | 344 |
+| `4eb3c21` | Apply Google quota-project headers to PSI/CrUX | 346 |
+| `2d5876a` | Replace Tranco caches atomically and reload changed files | 349 |
+| `c532dc6` | Redact report copies after retrieval | 351 |
+| `612956a` | Preserve domain quota diagnostics through CLI helpers | 353 |
+| `3ff157d` | Reject invalid CWV benchmark values | 355 |
+| `385f278` | Restrict comparisons to aggregate totals and disclose coverage | 359 |
+
+An additional offline smoke run rendered HTML with `--redact` from the checked-in
+synthetic demo inputs. PDF tests mock WeasyPrint and verify complete HTML is
+passed through; native PDF rendering/layout was not exercised. No live service
+or account capability is inferred from these checks.
+
+The current roadmap records all unbuilt proposals and why: contextual schema
+rules need a rule model; MCP, persistent history, cohort CTR and GA4 integration
+are substantial scope changes. Historical cache deletion and cross-process
+ordering also remain separate designs. PSI CLS units and live authentication,
+quota/service behavior and deployment-specific data permissions remain unverified.

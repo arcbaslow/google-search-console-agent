@@ -47,13 +47,13 @@ python scripts/gsc_data.py --site X --queries --filter "query CONTAINS 'pricing'
 
 `--data-state final` (default) is fully aggregated; data lag is ~2 days.
 `--data-state all` permits partial data within the requested window.
-The adapter still ends that window three days back; it does not currently
-expose today's or hourly data. Explicit dates/hourly support is proposed
-in the roadmap.
+Relative windows end three days back. Use explicit `--start-date` and
+`--end-date` for recent dates. Hourly reports use `--dimensions hour` with
+`--data-state hourly_all`; preserve the returned incomplete-data metadata.
 
 ## Date ranges
 
-Default windows end three days back so all included dates are complete.
+Default windows end three days back to allow for reporting lag; this does not guarantee daily coverage.
 Override with `--days N` on any command.
 
 ## After analysis

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document the remaining roadmap dispositions, concrete deferred designs and verification limits; refresh command guidance.
+
 - Reject grouped or offset inputs to Python period comparisons and disclose that aggregate queries do not verify daily coverage.
 
 - Reject invalid Core Web Vitals values without assigning a performance band or interrupting report rendering.
