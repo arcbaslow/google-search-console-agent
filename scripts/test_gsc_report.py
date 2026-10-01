@@ -140,3 +140,13 @@ def test_report_redaction_copies_all_sections_without_mutating_raw_input():
         assert "email-redacted" in result
     assert inputs == original
     assert overview["homepage"]["title"] == "user@example.com"
+
+def test_bad_metric_does_not_discard_report_or_other_benchmarks():
+    inputs = [{"agent": "source", "findings": [
+        {"severity": "High", "title": "bad source metric", "metric": "lcp_p75_ms", "metric_value": "bad"},
+        {"severity": "High", "title": "valid metric", "metric": "lcp_p75_ms", "metric_value": 4500}]}]
+    for render in [gsc_report.render_markdown, gsc_report.render_html]:
+        output = render("example.com", inputs)
+        assert "bad source metric" in output
+        assert "valid metric" in output
+        assert "verdict poor" in output

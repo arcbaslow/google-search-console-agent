@@ -120,3 +120,10 @@ def test_metric_listing_separates_diagnostics_from_core_web_vitals():
     out = gsc_benchmarks.list_metrics()
     assert out["core_web_vitals"] == ["lcp_p75_ms", "inp_p75_ms", "cls_p75"]
     assert out["diagnostic_metrics"] == ["fcp_p75_ms", "ttfb_p75_ms"]
+
+def test_invalid_cwv_values_do_not_receive_a_performance_band():
+    import math
+    for value in [None, True, "bad", "2500", -1, math.nan, math.inf]:
+        out = gsc_benchmarks.compare_cwv("lcp_p75_ms", value)
+        assert out["error"] == "invalid_metric_value"
+        assert "verdict" not in out

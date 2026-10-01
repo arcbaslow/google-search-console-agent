@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from typing import Any
 
@@ -83,6 +84,8 @@ def compare_cwv(metric: str, value: float) -> dict[str, Any]:
     """Compare a CWV p75 value to Google's good / needs-improvement / poor bands."""
     if metric not in CWV_THRESHOLDS:
         return {"metric": metric, "value": value, "error": "unknown_cwv_metric"}
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0:
+        return {"metric": metric, "value": None, "error": "invalid_metric_value"}
     bands = CWV_THRESHOLDS[metric]
     if value <= bands["good"]:
         verdict = "good"
