@@ -123,3 +123,20 @@ def test_pdf_receives_the_complete_html_without_network(monkeypatch, tmp_path):
     gsc_report.render_pdf(html, path)
     engine.assert_called_once_with(string=html)
     engine.return_value.write_pdf.assert_called_once_with(path)
+
+def test_report_redaction_copies_all_sections_without_mutating_raw_input():
+    import copy
+    inputs = [{"agent": "source", "summary": "user@example.com", "findings": [
+        {"severity": "High", "title": "user@example.com", "detail": "+77012345678"}],
+        "data": {"url": "https://example.com/?email=user%40example.com", "clicks": 25}}]
+    original = copy.deepcopy(inputs)
+    overview = {"homepage": {"title": "user@example.com"}}
+    for render in [gsc_report.render_markdown, gsc_report.render_html]:
+        result = render("https://example.com/user@example.com", inputs, overview=overview, redact=True)
+        assert "user@example.com" not in result
+        assert "user%40example.com" not in result
+        assert "77012345678" not in result
+        assert "25" in result
+        assert "email-redacted" in result
+    assert inputs == original
+    assert overview["homepage"]["title"] == "user@example.com"

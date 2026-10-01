@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add best-effort report redaction after data retrieval, preserving exact request targets and raw cache contracts.
+
 - Replace Tranco CSV caches atomically, reject malformed downloads, and refresh the in-memory index after file changes.
 
 - Apply Google credential headers to PSI and CrUX so configured quota-project attribution is preserved.

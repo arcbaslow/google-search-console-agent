@@ -60,3 +60,17 @@ See docs/ROADMAP.md for the pending cache privacy and consistency work.
 I aim to acknowledge security reports within 7 days and ship a fix or
 mitigation within 30 days. For high-severity issues affecting active
 users, both windows shrink.
+
+## Report privacy boundary
+
+`gsc_audit.py --redact` and `gsc_report.py --redact` apply best-effort email,
+phone and denied-key redaction to a copy of report data, including context,
+findings and raw sections, before rendering. Audit JSON is covered too.
+Requests always use the exact original property/URL; display redaction never
+changes a request target or cache identity. Default output remains unchanged.
+
+This is not anonymization: names, arbitrary identifiers, unknown encodings and
+sensitive page content can remain. Review reports before sharing. Existing and
+new adapter caches retain their documented raw-data contracts; this flag does
+not purge or rewrite them. PSI/CrUX/Search Analytics `--no-cache` can avoid
+cache use for targeted calls. Historical cleanup remains a separate proposal.

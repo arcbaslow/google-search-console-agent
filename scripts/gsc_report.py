@@ -69,8 +69,10 @@ def render_property_context_md(site_url, overview):
     return "\n".join(lines) + "\n"
 
 
-def render_markdown(site_url, agents_output, confidence="medium", overview=None):
+def render_markdown(site_url, agents_output, confidence="medium", overview=None, redact=False):
     """Build a markdown audit report. Plain markdown, no emoji."""
+    if redact:
+        site_url, agents_output, overview = redact_report_inputs(site_url, agents_output, overview)
     all_findings = []
     summaries = []
     for ao in agents_output:
@@ -205,7 +207,9 @@ def _esc(s):
     return escape(str(s), quote=True)
 
 
-def render_html(site_url, agents_output, confidence="medium", overview=None):
+def render_html(site_url, agents_output, confidence="medium", overview=None, redact=False):
+    if redact:
+        site_url, agents_output, overview = redact_report_inputs(site_url, agents_output, overview)
     findings = []
     for ao in agents_output:
         agent = ao.get("agent", "")
@@ -254,12 +258,20 @@ def render_pdf_bytes(html) -> bytes:
     return HTML(string=html).write_pdf()
 
 
+def redact_report_inputs(site_url, agents_output, overview):
+    """Copy display data through the best-effort scrubber; never change targets."""
+    from gsc_utils import scrub_pii
+    result = scrub_pii({"site": site_url, "agents": agents_output, "overview": overview})
+    return result["site"], result["agents"], result["overview"]
+
+
 def main():
     parser = argparse.ArgumentParser(description="GSC audit report generator")
     parser.add_argument("--site", required=True)
     parser.add_argument("--inputs", required=True, help="Comma-separated paths to agent JSON outputs")
     parser.add_argument("--format", choices=["md", "html", "pdf"], default="md")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--redact", action="store_true", help="Best-effort report redaction; does not anonymize or alter caches")
     parser.add_argument("--confidence", default="medium")
     args = parser.parse_args()
 
@@ -273,13 +285,13 @@ def main():
 
     out_path = Path(args.output)
     if args.format == "md":
-        out_path.write_text(render_markdown(args.site, inputs, confidence=args.confidence),
+        out_path.write_text(render_markdown(args.site, inputs, confidence=args.confidence, redact=args.redact),
                             encoding="utf-8")
     elif args.format == "html":
-        out_path.write_text(render_html(args.site, inputs, confidence=args.confidence),
+        out_path.write_text(render_html(args.site, inputs, confidence=args.confidence, redact=args.redact),
                             encoding="utf-8")
     else:
-        html = render_html(args.site, inputs, confidence=args.confidence)
+        html = render_html(args.site, inputs, confidence=args.confidence, redact=args.redact)
         render_pdf(html, str(out_path))
 
     print(json.dumps({"status": "ok", "output": str(out_path), "format": args.format}))

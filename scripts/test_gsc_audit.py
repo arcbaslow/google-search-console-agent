@@ -400,3 +400,18 @@ def test_partial_search_failure_is_machine_readable(monkeypatch):
     out = gsc_audit.run_search_analytics("example.com")
     assert out["data"]["source_errors"] == {"by_country": "TimeoutError"}
     assert "top_queries" in out["data"]
+
+def test_audit_redacts_display_after_using_exact_target(monkeypatch, capsys):
+    import json
+    from unittest.mock import MagicMock
+    site = "https://example.com/user@example.com/"
+    source = {"agent": "test", "data": {"url": site}, "findings": []}
+    runner = MagicMock(return_value=([source], {"site_url": site}, "medium"))
+    monkeypatch.setattr(gsc_audit, "orchestrate", runner)
+    monkeypatch.setattr(gsc_audit.gsc_auth, "get_credentials", lambda **kw: object())
+    monkeypatch.setattr("sys.argv", ["gsc_audit", "--site", site, "--format", "json", "--redact"])
+    assert gsc_audit.main() == 0
+    assert runner.call_args.kwargs["site_url"] == site
+    out = json.loads(capsys.readouterr().out)
+    assert "user@example.com" not in json.dumps(out)
+    assert source["data"]["url"] == site
