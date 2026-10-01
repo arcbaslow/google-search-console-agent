@@ -110,3 +110,10 @@ replacement preserves the old file. The in-memory index reloads when the
 CSV's timestamp or size changes; a corrupt or empty list is unavailable,
 not evidence that a domain ranks outside the list. Weekly refresh is unchanged.
 Independent processes are not locked together and may download concurrently.
+
+## Domain diagnostics in CLI output
+
+Both single-domain and comparison output retain Open PageRank error type,
+retry hint and quota headers when the API fails. Rank lookup targets use the
+normalized hostname, removing ports and paths; original Search Console
+properties are not changed.
