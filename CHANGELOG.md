@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Migrate Open PageRank to its current POST API using newly issued keys, preserving host scores and quota headers without transferring legacy environment keys.
+
 - Add explicit PT date ranges, hourly Search Analytics with partial-data metadata, and equal-period aggregate comparisons.
 
 - Parse sitemap namespaces and entities, deduplicate URLs, make samples repeatable and disclose bounded discovery coverage and errors.

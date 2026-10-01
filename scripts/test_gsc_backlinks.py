@@ -34,31 +34,29 @@ def test_tranco_band_top_100k():
 # ---------- Open PageRank ----------
 
 def test_open_pagerank_no_key_returns_hint(monkeypatch):
-    monkeypatch.delenv("OPENPAGERANK_API_KEY", raising=False)
+    monkeypatch.delenv("OPENPAGERANK_V1_API_KEY", raising=False)
     out = gsc_backlinks.query_open_pagerank(["example.com"])
     assert out["error"] == "no_api_key"
     assert "openpagerank" in out["hint"]
 
 
 def test_open_pagerank_no_domains_returns_error(monkeypatch):
-    monkeypatch.setenv("OPENPAGERANK_API_KEY", "test-key")
+    monkeypatch.setenv("OPENPAGERANK_V1_API_KEY", "opr_live_synthetic")
     out = gsc_backlinks.query_open_pagerank([])
     assert out["error"] == "no_domains"
 
 
 def test_open_pagerank_parses_response(monkeypatch):
     """Mock the urllib response and assert we flatten the fields right."""
-    monkeypatch.setenv("OPENPAGERANK_API_KEY", "test-key")
+    monkeypatch.setenv("OPENPAGERANK_V1_API_KEY", "opr_live_synthetic")
     mock_resp = MagicMock()
     mock_resp.read.return_value = json.dumps({
-        "response": [
-            {"domain": "example.com", "rank": "42", "page_rank_decimal": 5.8,
-             "page_rank_integer": 6, "status_code": 200},
-            {"domain": "another.com", "rank": "99", "page_rank_decimal": 4.2,
-             "page_rank_integer": 4, "status_code": 200},
+        "results": [
+            {"domain": "example.com", "rank": 42, "open_page_rank": 5.8, "found": True},
+            {"domain": "another.com", "rank": 99, "open_page_rank": 4.2, "found": True},
         ],
-        "rate_limit": {"limit_left": "999"},
     }).encode("utf-8")
+    mock_resp.headers = {"X-Domains-Remaining": "999"}
     mock_resp.__enter__ = lambda s: s
     mock_resp.__exit__ = lambda *_a: False
 
@@ -67,9 +65,9 @@ def test_open_pagerank_parses_response(monkeypatch):
 
     assert out["source"] == "open_pagerank"
     assert out["results"]["example.com"]["page_rank_decimal"] == 5.8
-    assert out["results"]["example.com"]["page_rank_integer"] == 6
+    assert out["results"]["example.com"]["page_rank_integer"] is None
     assert out["results"]["another.com"]["rank"] == 99
-    assert out["rate_limit"]["limit_left"] == "999"
+    assert out["rate_limit"]["X-Domains-Remaining"] == "999"
 
 
 # ---------- Tranco ----------
@@ -106,7 +104,7 @@ def test_domain_authority_returns_open_pagerank_error_when_no_key(monkeypatch, t
     monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", fake_csv)
     monkeypatch.setattr(gsc_backlinks, "_tranco_dict_cache", None)
     monkeypatch.setattr(gsc_backlinks, "_ensure_tranco_cache", lambda: None)
-    monkeypatch.delenv("OPENPAGERANK_API_KEY", raising=False)
+    monkeypatch.delenv("OPENPAGERANK_V1_API_KEY", raising=False)
 
     out = gsc_backlinks.domain_authority("example.com")
     assert out["domain"] == "example.com"
@@ -121,7 +119,7 @@ def test_compare_domains_orders_rows(monkeypatch, tmp_path):
     monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", fake_csv)
     monkeypatch.setattr(gsc_backlinks, "_tranco_dict_cache", None)
     monkeypatch.setattr(gsc_backlinks, "_ensure_tranco_cache", lambda: None)
-    monkeypatch.delenv("OPENPAGERANK_API_KEY", raising=False)
+    monkeypatch.delenv("OPENPAGERANK_V1_API_KEY", raising=False)
 
     out = gsc_backlinks.compare_domains(["me.com", "competitor.com"])
     assert out["primary"] == "me.com"
@@ -185,3 +183,46 @@ def test_missing_tranco_domain_is_not_a_source_failure(monkeypatch):
     row = gsc_backlinks.compare_domains(["a.example"])["rows"][0]
     assert row["tranco_band"] == "outside_top_1m"
     assert "tranco_error" not in row
+
+def test_legacy_key_is_not_transferred_to_new_host(monkeypatch):
+    monkeypatch.setenv("OPENPAGERANK_API_KEY", "legacy-synthetic")
+    monkeypatch.delenv("OPENPAGERANK_V1_API_KEY", raising=False)
+    fetch = MagicMock()
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    assert gsc_backlinks.query_open_pagerank(["example.com"])["error"] == "no_api_key"
+    assert gsc_backlinks.query_open_pagerank(["example.com"], api_key="legacy-synthetic")["error"] == "migration_required"
+    fetch.assert_not_called()
+
+
+def test_current_opr_request_hosts_and_budgets(monkeypatch):
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.headers = {"X-Domains-Remaining": "0", "X-RateLimit-Remaining": "59"}
+    response.read.return_value = json.dumps({"as_of": "2026-09-01", "results": [
+        {"domain": "example.com", "found": True, "open_page_rank": 5, "hosts": [
+            {"host": "blog.example.com", "found": True, "open_page_rank": 3, "rank": 77}]},
+        {"domain": "absent.test", "found": False}]}).encode()
+    fetch = MagicMock(return_value=response)
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    out = gsc_backlinks.query_open_pagerank(["blog.example.com", "www.example.com", "absent.test"], api_key="opr_live_synthetic")
+    request = fetch.call_args.args[0]
+    assert request.method == "POST"
+    assert request.get_header("Authorization") == "Bearer opr_live_synthetic"
+    assert json.loads(request.data)["include_history"] is False
+    assert out["results"]["blog.example.com"]["page_rank_decimal"] == 3
+    assert out["results"]["blog.example.com"]["rank_scope"] == "host"
+    assert out["results"]["www.example.com"]["source_domain"] == "example.com"
+    assert out["results"]["absent.test"]["page_rank_decimal"] is None
+    assert out["rate_limit"]["X-Domains-Remaining"] == "0"
+
+
+def test_opr_quota_error_exposes_retry_hint_without_retry(monkeypatch):
+    import io
+    import urllib.error
+    fetch = MagicMock(side_effect=urllib.error.HTTPError("url", 429, "quota", {"Retry-After": "60"},
+        io.BytesIO(b'{"error":{"type":"quota_error"}}')))
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    out = gsc_backlinks.query_open_pagerank(["example.com"], api_key="opr_live_synthetic")
+    assert out["error_type"] == "quota_error"
+    assert out["retry_after"] == "60"
+    fetch.assert_called_once()

@@ -20,7 +20,7 @@ python scripts/gsc_backlinks.py --compare <site>,<competitor1>,<competitor2> --j
 ```
 
 If Open PageRank reports `no_api_key`, surface the setup hint
-(`OPENPAGERANK_API_KEY`) but continue with Tranco-only output — it's
+(`OPENPAGERANK_V1_API_KEY`) but continue with Tranco-only output — it's
 still useful.
 
 ## What to surface
@@ -81,8 +81,23 @@ results remain available if Open PageRank fails. The audit checks both
 sources even without competitors, reports unavailable sources, and matches
 the primary domain exactly when comparing ranks.
 
-This branch retains the legacy Open PageRank endpoint. Current docs describe
-new authentication and response fields; migration requires a separate review.
+Open PageRank uses the current POST API and a newly issued OPR key.
+Legacy environment keys are never transferred to the new host.
 See [the roadmap](../docs/ROADMAP.md) for endpoint and terms evidence. Tranco data
 has upstream attribution and license conditions; downloaded lists are not
 covered by this repository's MIT license.
+
+## Open PageRank key migration
+
+The adapter now calls `https://openpagerank.keywordseverywhere.com/v1/domains/bulk`
+with Bearer authentication. Obtain a new `opr_live_` key from the upstream
+[dashboard and docs](https://openpagerank.keywordseverywhere.com/docs), then set
+`OPENPAGERANK_V1_API_KEY` or pass `--api-key`. `OPENPAGERANK_API_KEY` is ignored;
+old DomCop keys are retired. No key is automatically forwarded to the new host.
+
+One request accepts up to 100 entries and disables monthly history. Output
+preserves score, domain/host rank scope, release date and quota headers. Missing
+domains have null scores; the old integer score remains null. Host results are
+matched exactly, with the documented `www` alias. Quota errors retain retry
+hints without automatic retries. Scores remain proprietary service output,
+not a vendored backlink index. Live authentication has not been tested.
