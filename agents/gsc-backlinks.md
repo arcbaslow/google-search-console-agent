@@ -101,3 +101,12 @@ domains have null scores; the old integer score remains null. Host results are
 matched exactly, with the documented `www` alias. Quota errors retain retry
 hints without automatic retries. Scores remain proprietary service output,
 not a vendored backlink index. Live authentication has not been tested.
+
+## Tranco cache consistency
+
+Tranco downloads are size-bounded (50 MB archive, 100 MB CSV), checked for
+valid nonempty rank rows, and atomically replace the previous CSV. Failed
+replacement preserves the old file. The in-memory index reloads when the
+CSV's timestamp or size changes; a corrupt or empty list is unavailable,
+not evidence that a domain ranks outside the list. Weekly refresh is unchanged.
+Independent processes are not locked together and may download concurrently.
