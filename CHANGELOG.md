@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject grouped or offset inputs to Python period comparisons and disclose that aggregate queries do not verify daily coverage.
+
 - Reject invalid Core Web Vitals values without assigning a performance band or interrupting report rendering.
 
 - Preserve Open PageRank quota diagnostics in domain CLI results and normalize rank lookup hostnames consistently.

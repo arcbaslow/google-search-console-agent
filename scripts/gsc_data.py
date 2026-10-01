@@ -178,6 +178,8 @@ def resolve_dates(days=28, start_date=None, end_date=None):
 
 def compare_periods(site_url, start_date, end_date, **kw):
     """Two explicit aggregate queries, not a sum of truncated top rows."""
+    if kw.get("dimensions") or kw.get("start_row", 0) != 0 or "row_limit" in kw:
+        raise ValueError("comparison requires ungrouped totals, start_row 0 and its fixed row limit")
     start, end = resolve_dates(start_date=start_date, end_date=end_date)
     size = (date.fromisoformat(end) - date.fromisoformat(start)).days + 1
     previous_end = date.fromisoformat(start) - timedelta(days=1)
@@ -185,7 +187,8 @@ def compare_periods(site_url, start_date, end_date, **kw):
     current = query(site_url, start_date=start, end_date=end, row_limit=1, **kw)
     previous = query(site_url, start_date=str(previous_start), end_date=str(previous_end), row_limit=1, **kw)
     result = {"current": current, "previous": previous, "days_per_period": size,
-              "changes": {}, "comparison_status": "unavailable"}
+              "changes": {}, "comparison_status": "unavailable",
+              "coverage": "Aggregate queries do not establish daily coverage within each requested period."}
     # Fresh aggregate queries cannot identify partial dates; only compare final data.
     if kw.get("data_state", "final") != "final":
         result["comparison_status"] = "partial_data_possible"
