@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve Open PageRank quota diagnostics in domain CLI results and normalize rank lookup hostnames consistently.
+
 - Add best-effort report redaction after data retrieval, preserving exact request targets and raw cache contracts.
 
 - Replace Tranco CSV caches atomically, reject malformed downloads, and refresh the in-memory index after file changes.

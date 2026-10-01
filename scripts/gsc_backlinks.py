@@ -47,12 +47,11 @@ FETCH_TIMEOUT_SECONDS = 60
 
 
 def _strip_scheme(host: str) -> str:
-    if host.startswith("sc-domain:"):
-        return host[len("sc-domain:"):].strip().strip("/")
-    parsed = urllib.parse.urlparse(host)
-    if parsed.scheme:
-        return parsed.netloc.lower()
-    return host.strip().strip("/").lower()
+    host = host.removeprefix("sc-domain:").strip().strip("/")
+    parsed = urllib.parse.urlsplit(host if "://" in host else "//" + host)
+    if not parsed.hostname or parsed.username is not None:
+        raise ValueError("expected a domain or an HTTP(S) URL without user information")
+    return parsed.hostname.lower().rstrip(".")
 
 
 # ---------- Open PageRank ----------
@@ -241,6 +240,9 @@ def domain_authority(domain: str, api_key: str | None = None) -> dict:
         out["open_pagerank_as_of"] = opr.get("as_of")
     else:
         out["open_pagerank_error"] = opr["error"]
+        out["open_pagerank_error_type"] = opr.get("error_type")
+        out["open_pagerank_retry_after"] = opr.get("retry_after")
+        out["open_pagerank_rate_limit"] = opr.get("rate_limit", {})
         out["open_pagerank_hint"] = opr.get("hint") or opr.get("message")
     return out
 
@@ -257,6 +259,9 @@ def compare_domains(domains: list[str], api_key: str | None = None) -> dict:
     opr_results = opr.get("results", {}) if "error" not in opr else {}
     if "error" in opr:
         out["open_pagerank_error"] = opr["error"]
+        out["open_pagerank_error_type"] = opr.get("error_type")
+        out["open_pagerank_retry_after"] = opr.get("retry_after")
+        out["open_pagerank_rate_limit"] = opr.get("rate_limit", {})
         out["open_pagerank_hint"] = opr.get("hint") or opr.get("message")
 
     for row in out["rows"]:

@@ -439,3 +439,10 @@ sensitive page content can remain. Review reports before sharing. Existing and
 new adapter caches retain their documented raw-data contracts; this flag does
 not purge or rewrite them. PSI/CrUX/Search Analytics `--no-cache` can avoid
 cache use for targeted calls. Historical cleanup remains a separate proposal.
+
+## Domain diagnostics in CLI output
+
+Both single-domain and comparison output retain Open PageRank error type,
+retry hint and quota headers when the API fails. Rank lookup targets use the
+normalized hostname, removing ports and paths; original Search Console
+properties are not changed.

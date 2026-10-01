@@ -266,3 +266,19 @@ def test_empty_tranco_file_is_unavailable_not_outside_list(monkeypatch, tmp_path
     monkeypatch.setattr(gsc_backlinks, "TRANCO_CACHE", path)
     monkeypatch.setattr(gsc_backlinks, "_ensure_tranco_cache", lambda: None)
     assert gsc_backlinks._tranco_rows(["example.com"])[0]["tranco_band"] == "unavailable"
+
+def test_domain_helpers_retain_quota_diagnostics(monkeypatch):
+    monkeypatch.setattr(gsc_backlinks, "tranco_rank", lambda _: 10)
+    monkeypatch.setattr(gsc_backlinks, "query_open_pagerank", lambda *a, **kw: {
+        "error": "http_429", "error_type": "quota_error", "retry_after": "60",
+        "rate_limit": {"X-Domains-Remaining": "0"}})
+    for result in [gsc_backlinks.domain_authority("example.com"),
+                   gsc_backlinks.compare_domains(["example.com"])]:
+        assert result["open_pagerank_retry_after"] == "60"
+        assert result["open_pagerank_error_type"] == "quota_error"
+        assert result["open_pagerank_rate_limit"]["X-Domains-Remaining"] == "0"
+
+
+def test_rank_lookup_normalizes_hostname_without_ports_or_paths():
+    for value in ["sc-domain:Example.COM", "https://Example.com:8443/shop/", "Example.com:8443/shop/"]:
+        assert gsc_backlinks._strip_scheme(value) == "example.com"
