@@ -373,3 +373,30 @@ def test_calendar_trend_zero_baseline_and_partial_data_have_no_percentage():
     assert gsc_audit.calendar_trend(series)["reason"] == "zero_previous_clicks"
     series["metadata"] = {"first_incomplete_date": "2026-01-14"}
     assert gsc_audit.calendar_trend(series)["status"] == "incomplete"
+
+@pytest.mark.parametrize("data,status,expected", [
+    ({}, None, "medium"),
+    ({"source_errors": {"by_country": "TimeoutError"}}, None, "low"),
+    ({"click_trend": {"status": "incomplete"}}, None, "low"),
+    ({}, "error", "low"),
+])
+def test_confidence_uses_availability_not_finding_severity(monkeypatch, data, status, expected):
+    monkeypatch.setattr(gsc_audit, "run_overview", lambda *a: (gsc_audit._ok("overview", "ok"), {}))
+    for name in ["run_ctr_curve", "run_cwv", "run_structured_data"]:
+        monkeypatch.setattr(gsc_audit, name, lambda *a: gsc_audit._ok("other", "ok"))
+    result = gsc_audit._ok("gsc-search-analytics", "ok", [
+        {"severity": "High", "title": "Confirmed traffic decline"}], data)
+    result["status"] = status
+    monkeypatch.setattr(gsc_audit, "run_search_analytics", lambda *a: result)
+    assert gsc_audit.orchestrate("example.com")[2] == expected
+
+
+def test_partial_search_failure_is_machine_readable(monkeypatch):
+    for name in ["top_queries", "top_pages", "by_device", "by_country", "time_series"]:
+        monkeypatch.setattr(gsc_audit.gsc_data, name, lambda *a, **kw: {"rows": []})
+    def failed(*a, **kw):
+        raise TimeoutError("unavailable")
+    monkeypatch.setattr(gsc_audit.gsc_data, "by_country", failed)
+    out = gsc_audit.run_search_analytics("example.com")
+    assert out["data"]["source_errors"] == {"by_country": "TimeoutError"}
+    assert "top_queries" in out["data"]

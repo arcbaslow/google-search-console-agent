@@ -58,9 +58,9 @@ Plain markdown, no emoji. Sections:
 
 The driver does not have a single sampling number to anchor confidence
 on the way GA4 does, so by default it reports `medium`. The signal it
-uses to drop to `low`: if any High-severity finding came from the
-search-analytics agent (typically meaning the request itself failed),
-confidence drops.
+uses to drop to `low`: a failed search worker or subrequest, or incomplete
+calendar-trend coverage. A confirmed traffic decline does not lower confidence.
+Search subrequest failures appear in `data.source_errors`.
 
 ## Error Handling
 

@@ -219,11 +219,13 @@ def run_search_analytics(site_url, days=28):
     try:
         data["top_queries"] = gsc_data.top_queries(site_url, days=days, row_limit=50)
     except Exception as e:
+        data.setdefault("source_errors", {})["top_queries"] = type(e).__name__
         findings.append({"severity": "High", "title": "top queries fetch failed", "detail": str(e)})
 
     try:
         data["top_pages"] = gsc_data.top_pages(site_url, days=days, row_limit=50)
     except Exception as e:
+        data.setdefault("source_errors", {})["top_pages"] = type(e).__name__
         findings.append({"severity": "High", "title": "top pages fetch failed", "detail": str(e)})
 
     try:
@@ -235,11 +237,13 @@ def run_search_analytics(site_url, days=28):
             mobile_share = (mobile.get("clicks", 0) / total_clicks) if mobile else 0
             data["mobile_click_share"] = round(mobile_share, 4)
     except Exception as e:
+        data.setdefault("source_errors", {})["by_device"] = type(e).__name__
         findings.append({"severity": "Medium", "title": "device breakdown failed", "detail": str(e)})
 
     try:
         data["by_country"] = gsc_data.by_country(site_url, days=days, row_limit=15)
     except Exception as e:
+        data.setdefault("source_errors", {})["by_country"] = type(e).__name__
         findings.append({"severity": "Low", "title": "country breakdown failed", "detail": str(e)})
 
     try:
@@ -256,6 +260,7 @@ def run_search_analytics(site_url, days=28):
                               f"({change_pct:+.1f}%). Equal {trend['days_per_period']}-day calendar periods.",
                 })
     except Exception as e:
+        data.setdefault("source_errors", {})["time_series"] = type(e).__name__
         findings.append({"severity": "Low", "title": "time series failed", "detail": str(e)})
 
     rows = ((data.get("top_queries") or {}).get("rows")) or []
@@ -639,7 +644,8 @@ def orchestrate(site_url, days=28, form_factor="ALL_FORM_FACTORS",
 
     confidence = "medium"
     sa = next((a for a in agents_output if a["agent"] == "gsc-search-analytics"), None)
-    if sa and any(f.get("severity") == "High" for f in sa.get("findings", [])):
+    if sa and (sa.get("status") == "error" or sa.get("data", {}).get("source_errors")
+               or sa.get("data", {}).get("click_trend", {}).get("status") == "incomplete"):
         confidence = "low"
 
     return agents_output, overview_data, confidence

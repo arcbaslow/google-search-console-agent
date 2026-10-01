@@ -120,7 +120,7 @@ Every write, including direct Python calls, prints the resolved property and sit
 
 The bundled CTR curve is a historical reference, not a prediction for every query or SERP. CrUX field data and Lighthouse lab results measure different conditions. Structured-data validation checks the implemented rules and cannot guarantee rich-result eligibility. Header and TLS diagnostics describe technical conditions; they do not prove a ranking effect.
 
-The report defaults to `medium` confidence and drops to `low` when search-data retrieval fails. That label is an audit convention, not an estimate of Search Console sampling.
+The report defaults to `medium` confidence and drops to `low` when search-data retrieval fails or calendar-trend coverage is incomplete. That label is an audit convention, not an estimate of Search Console sampling.
 
 ## Tests
 

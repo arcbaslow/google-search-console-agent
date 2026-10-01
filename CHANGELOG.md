@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Base audit confidence on search availability and trend coverage, not SEO finding severity; expose partial search errors by source.
+
 - Compare equal calendar periods in audit trends and disclose missing dates instead of splitting returned rows.
 
 - Reuse cached empty inventories and invalidate related site/sitemap lists after successful confirmed writes. Preserve write success with a cache warning if local invalidation fails.
