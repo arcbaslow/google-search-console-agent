@@ -103,3 +103,11 @@ boundaries and missing-day counts. Missing or partial dates suppress the
 percentage and decline finding; absent rows are not silently treated as zero.
 A zero-click baseline has no percentage change. These are descriptive
 comparisons, not causal diagnoses or seasonality adjustments.
+
+## Search data confidence
+
+Confidence is an availability convention: `medium` normally, `low` after a
+search worker/subrequest failure or incomplete calendar-trend coverage.
+A High SEO finding alone does not lower confidence. Search errors are also
+listed by source under `data.source_errors`. This label does not estimate
+sampling, statistical certainty or the quality of other sources.
