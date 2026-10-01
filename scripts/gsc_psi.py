@@ -25,7 +25,7 @@ import urllib.request
 from typing import Any
 
 from gsc_auth import get_credentials
-from gsc_utils import cache_get, cache_set
+from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 DEFAULT_CATEGORIES = ("performance", "seo", "accessibility", "best-practices")
@@ -75,7 +75,7 @@ def run_psi(url: str, strategy: str = "mobile",
             payload = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"PSI HTTP {e.code}: {body[:600]}") from None
+        raise ApiReadError(http_error_details("PSI", e.code, body, e.headers)) from None
 
     summary = _flatten_psi(payload, strategy)
     out = {**summary, "raw": payload}
@@ -152,7 +152,7 @@ def main():
         out = run_psi(args.url, strategy=args.strategy, categories=cats,
                       locale=args.locale, use_cache=not args.no_cache)
     except Exception as e:
-        print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
+        print(json.dumps({"error": str(e), "type": type(e).__name__, **getattr(e, "details", {})}), file=sys.stderr)
         return 1
     # Keep stdout compact unless the user really wants the raw Lighthouse blob
     out_compact = out if args.raw else {k: v for k, v in out.items() if k != "raw"}

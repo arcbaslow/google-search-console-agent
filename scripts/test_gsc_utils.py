@@ -202,3 +202,63 @@ def test_cache_roundtrip_preserves_unicode_and_empty_list():
     gsc_utils.cache_set([], "empty")
     assert gsc_utils.cache_get("unicode") == [{"query": "Алматы"}]
     assert gsc_utils.cache_get("empty") == []
+
+@pytest.mark.parametrize("status,reason,hint,calls,category", [
+    (403, "forbidden", None, 1, "access_denied"),
+    (403, "dailyLimitExceeded", None, 1, "quota_exhausted"),
+    (403, "userRateLimitExceeded", "2", 2, "rate_or_quota_limit"),
+    (429, "", "900", 1, "rate_or_quota_limit"),
+    (429, "", "invalid", 1, "rate_or_quota_limit"),
+    (503, "", None, 2, "service_unavailable"),
+])
+def test_read_retry_policy_and_diagnostics(monkeypatch, status, reason, hint, calls, category):
+    import json
+    from unittest.mock import MagicMock
+
+    import gsc_utils
+    import httplib2
+    from googleapiclient.errors import HttpError
+    resp = httplib2.Response({"status": str(status), **({"retry-after": hint} if hint else {})})
+    error = HttpError(resp, json.dumps({"error": {"errors": [{"reason": reason}]}}).encode())
+    request = MagicMock()
+    request.execute.side_effect = error
+    sleep = MagicMock()
+    monkeypatch.setattr(gsc_utils.time, "sleep", sleep)
+    with pytest.raises(gsc_utils.ApiReadError) as caught:
+        gsc_utils.execute_read(request)
+    assert request.execute.call_count == calls
+    assert sleep.call_count == calls - 1
+    assert caught.value.details["category"] == category
+    assert caught.value.details["retry_after"] == hint
+
+
+def test_inspection_read_is_not_retried(monkeypatch):
+    from unittest.mock import MagicMock
+
+    import gsc_admin
+    import httplib2
+    from googleapiclient.errors import HttpError
+    service = MagicMock()
+    execute = service.urlInspection().index().inspect().execute
+    execute.side_effect = HttpError(httplib2.Response({"status": "429"}), b'{}')
+    monkeypatch.setattr(gsc_admin, "_get_service", lambda: service)
+    with pytest.raises(RuntimeError, match="rate_or_quota_limit"):
+        gsc_admin.inspect_url("example.com", "https://example.com/a")
+    execute.assert_called_once_with()
+
+
+def test_google_transport_has_timeout_and_disables_replay(monkeypatch):
+    from unittest.mock import MagicMock
+
+    import gsc_utils
+    build = MagicMock()
+    auth = MagicMock()
+    http = MagicMock()
+    monkeypatch.setattr("googleapiclient.discovery.build", build)
+    monkeypatch.setattr("google_auth_httplib2.AuthorizedHttp", auth)
+    monkeypatch.setattr("httplib2.Http", http)
+    creds = object()
+    gsc_utils.build_search_service(creds)
+    http.assert_called_once_with(timeout=60)
+    auth.assert_called_once_with(creds, http=http.return_value, max_refresh_attempts=0)
+    assert build.call_args.kwargs["http"] is auth.return_value

@@ -153,3 +153,79 @@ def normalize_site_url(site: str) -> str:
     if "/" not in site:
         return f"sc-domain:{site}"
     return site
+
+# ---------- Google read transport ----------
+
+class ApiReadError(RuntimeError):
+    def __init__(self, details):
+        self.details = details
+        super().__init__(f"{details['source']} HTTP {details['http_status']}: "
+                         f"{details['category']}; retry_after={details['retry_after']}")
+
+
+def http_error_details(source, status, content, headers):
+    """Expose status/reasons without echoing request URLs, tokens or raw bodies."""
+    try:
+        payload = json.loads(content)
+        error = payload.get("error", {})
+        reasons = [e.get("reason") for e in error.get("errors", []) if isinstance(e, dict)]
+        reasons += [error.get("status")]
+    except (ValueError, TypeError, AttributeError):
+        reasons = []
+    reasons = [r for r in reasons if isinstance(r, str)]
+    if any(r in ("dailyLimitExceeded", "quotaExceeded", "dailyLimitExceededUnreg") for r in reasons):
+        category = "quota_exhausted"
+    elif status == 429 or any(r in ("rateLimitExceeded", "userRateLimitExceeded") for r in reasons):
+        category = "rate_or_quota_limit"
+    elif status in (401, 403):
+        category = "authentication" if status == 401 else "access_denied"
+    elif status >= 500:
+        category = "service_unavailable"
+    else:
+        category = "request_failed"
+    headers = {str(k).lower(): v for k, v in (headers or {}).items()}
+    return {"source": source, "http_status": status, "category": category,
+            "reasons": reasons, "retry_after": headers.get("retry-after")}
+
+
+def _retry_delay(hint):
+    from datetime import datetime, timezone
+    from email.utils import parsedate_to_datetime
+    if hint is None:
+        return 1.0
+    try:
+        delay = float(hint)
+    except (TypeError, ValueError):
+        try:
+            delay = (parsedate_to_datetime(hint) - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            return None
+    # Do not shorten upstream delays to fit our budget.
+    return max(0.0, delay) if 0 <= delay <= 5 else None
+
+
+def execute_read(request, *, retry=True):
+    """One retry at most for eligible GSC reads; never use for writes."""
+    from googleapiclient.errors import HttpError
+    for attempt in range(2 if retry else 1):
+        try:
+            return request.execute()
+        except HttpError as error:
+            details = http_error_details("GSC", error.resp.status, error.content, error.resp)
+            details["attempts"] = attempt + 1
+            delay = _retry_delay(details["retry_after"])
+            eligible = details["category"] == "rate_or_quota_limit" or error.resp.status in (500, 502, 503, 504)
+            if retry and attempt == 0 and eligible and delay is not None:
+                time.sleep(delay)
+                continue
+            raise ApiReadError(details) from None
+
+
+def build_search_service(credentials):
+    """A separate bounded transport per service; never replay after a 401."""
+    import google_auth_httplib2
+    import httplib2
+    from googleapiclient.discovery import build
+    transport = google_auth_httplib2.AuthorizedHttp(
+        credentials, http=httplib2.Http(timeout=60), max_refresh_attempts=0)
+    return build("searchconsole", "v1", http=transport, cache_discovery=False)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Set explicit Google socket timeouts, add bounded retries for eligible reads, and expose quota/access diagnostics without retrying writes or URL Inspection.
+
 - Expose optional CrUX distributions, LCP subparts and other available metrics with --diagnostics for snapshots and history.
 
 - Migrate Open PageRank to its current POST API using newly issued keys, preserving host scores and quota headers without transferring legacy environment keys.

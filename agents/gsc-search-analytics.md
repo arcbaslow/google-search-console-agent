@@ -145,3 +145,18 @@ aggregate queries for adjacent equal periods, returning click/impression
 percentage changes, CTR percentage-point change and position difference.
 It never sums top rows. Zero baselines give null percentages; non-final data
 suppresses differences. Freshness and seasonality still need interpretation.
+
+## Read transport and quotas
+
+GSC services use separate 60-second socket-timeout transports. Search Analytics
+and site/sitemap reads may retry once for transient HTTP 500/502/503/504 or rate
+limits, waiting one second by default. A valid Retry-After is honored only if
+it fits five seconds; longer/invalid hints return immediately for manual action.
+Access denial and explicit daily quota exhaustion are not retried. JSON errors
+include HTTP status, category, reasons and the retry hint without raw bodies.
+PSI and CrUX expose the same diagnostics but do not automatically retry.
+
+Writes and URL Inspection never use the read retry policy. Authentication
+401 replay is disabled on the Google transport; refresh happens before sending
+when needed. These socket timeouts are not total wall-time guarantees. Quotas
+are shared with other clients; the toolkit does not estimate remaining GSC quota.

@@ -29,7 +29,7 @@ import urllib.request
 from typing import Any
 
 from gsc_auth import get_credentials
-from gsc_utils import cache_get, cache_set
+from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details
 
 CRUX_QUERY_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord"
 CRUX_HISTORY_URL = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord"
@@ -69,7 +69,7 @@ def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
             # CrUX returns 404 when the URL has insufficient data — that's not
             # an error in the usual sense, just "no data".
             return {"_status": "no_data", "_http_code": 404, "_message": body_text[:300]}
-        raise RuntimeError(f"CrUX HTTP {e.code}: {body_text[:500]}") from None
+        raise ApiReadError(http_error_details("CrUX", e.code, body_text, e.headers)) from None
 
 
 def query_record(origin: str | None = None, url: str | None = None,
@@ -229,7 +229,7 @@ def main():
             out = query_record(origin=args.origin, url=args.url, form_factor=args.form_factor,
                                use_cache=not args.no_cache, diagnostics=args.diagnostics)
     except Exception as e:
-        print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
+        print(json.dumps({"error": str(e), "type": type(e).__name__, **getattr(e, "details", {})}), file=sys.stderr)
         return 1
     print(json.dumps(out, indent=2, default=str))
     return 0

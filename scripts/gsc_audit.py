@@ -57,7 +57,7 @@ def _failed(agent, error):
     return {**_ok(agent, f"{agent} unavailable", [
         {"severity": "High" if agent == "gsc-search-analytics" else "Medium",
          "title": f"{agent} failed", "detail": str(error)},
-    ], {"error": type(error).__name__, "message": str(error)}), "status": "error"}
+    ], {"error": type(error).__name__, "message": str(error), **getattr(error, "details", {})}), "status": "error"}
 
 
 def _origin_of(site_url):
@@ -220,12 +220,14 @@ def run_search_analytics(site_url, days=28):
         data["top_queries"] = gsc_data.top_queries(site_url, days=days, row_limit=50)
     except Exception as e:
         data.setdefault("source_errors", {})["top_queries"] = type(e).__name__
+        data.setdefault("source_error_details", {})["top_queries"] = getattr(e, "details", {})
         findings.append({"severity": "High", "title": "top queries fetch failed", "detail": str(e)})
 
     try:
         data["top_pages"] = gsc_data.top_pages(site_url, days=days, row_limit=50)
     except Exception as e:
         data.setdefault("source_errors", {})["top_pages"] = type(e).__name__
+        data.setdefault("source_error_details", {})["top_pages"] = getattr(e, "details", {})
         findings.append({"severity": "High", "title": "top pages fetch failed", "detail": str(e)})
 
     try:
@@ -238,12 +240,14 @@ def run_search_analytics(site_url, days=28):
             data["mobile_click_share"] = round(mobile_share, 4)
     except Exception as e:
         data.setdefault("source_errors", {})["by_device"] = type(e).__name__
+        data.setdefault("source_error_details", {})["by_device"] = getattr(e, "details", {})
         findings.append({"severity": "Medium", "title": "device breakdown failed", "detail": str(e)})
 
     try:
         data["by_country"] = gsc_data.by_country(site_url, days=days, row_limit=15)
     except Exception as e:
         data.setdefault("source_errors", {})["by_country"] = type(e).__name__
+        data.setdefault("source_error_details", {})["by_country"] = getattr(e, "details", {})
         findings.append({"severity": "Low", "title": "country breakdown failed", "detail": str(e)})
 
     try:
@@ -261,6 +265,7 @@ def run_search_analytics(site_url, days=28):
                 })
     except Exception as e:
         data.setdefault("source_errors", {})["time_series"] = type(e).__name__
+        data.setdefault("source_error_details", {})["time_series"] = getattr(e, "details", {})
         findings.append({"severity": "Low", "title": "time series failed", "detail": str(e)})
 
     rows = ((data.get("top_queries") or {}).get("rows")) or []
