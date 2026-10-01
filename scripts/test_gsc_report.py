@@ -86,3 +86,40 @@ def test_render_markdown_handles_no_findings():
     md = gsc_report.render_markdown("sc-domain:example.com", [],
                                      confidence="medium", overview=OVERVIEW)
     assert "_No findings._" in md
+
+def test_html_has_context_benchmarks_summaries_and_source_data():
+    html = gsc_report.render_html("example.com", AGENT_OUTPUTS, overview=OVERVIEW)
+    for text in ["Acme Outfitters", "siteOwner", "verdict poor", "verdict needs_improvement",
+                 "Executive Summary", "Per-Agent Output", "Source: gsc-core-web-vitals", "sitemap_count"]:
+        assert text in html
+    assert "@import" not in html
+
+
+def test_html_escapes_all_payload_fields_and_does_not_expand_payload_placeholders():
+    payload = '<script>alert(1)</script>" onmouseover="x'
+    html = gsc_report.render_html("__FINDINGS__", [{"agent": payload, "summary": payload,
+        "findings": [{"severity": payload, "title": payload, "detail": payload}],
+        "data": {"value": payload}}], confidence=payload,
+        overview={"homepage": {"title": payload}})
+    assert '<script>' not in html
+    assert '" onmouseover="' not in html
+    assert "&lt;script&gt;" in html
+    assert "__FINDINGS__" in html
+
+
+def test_html_recovers_context_from_precollected_overview():
+    html = gsc_report.render_html("example.com", [dict(agent="gsc-overview", data=OVERVIEW)])
+    assert "Acme Outfitters" in html
+
+
+def test_pdf_receives_the_complete_html_without_network(monkeypatch, tmp_path):
+    import sys
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock
+    engine = MagicMock()
+    monkeypatch.setitem(sys.modules, "weasyprint", SimpleNamespace(HTML=engine))
+    html = gsc_report.render_html("example.com", AGENT_OUTPUTS, overview=OVERVIEW)
+    path = str(tmp_path / "report.pdf")
+    gsc_report.render_pdf(html, path)
+    engine.assert_called_once_with(string=html)
+    engine.return_value.write_pdf.assert_called_once_with(path)

@@ -710,9 +710,9 @@ def main():
         body = gsc_report.render_markdown(site_url_norm, agents_output,
                                           confidence=confidence, overview=overview)
     elif args.format == "html":
-        body = gsc_report.render_html(site_url_norm, agents_output, confidence=confidence)
+        body = gsc_report.render_html(site_url_norm, agents_output, confidence=confidence, overview=overview)
     else:
-        html = gsc_report.render_html(site_url_norm, agents_output, confidence=confidence)
+        html = gsc_report.render_html(site_url_norm, agents_output, confidence=confidence, overview=overview)
         body = gsc_report.render_pdf_bytes(html)
 
     if args.output:

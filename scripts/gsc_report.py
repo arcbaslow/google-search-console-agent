@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
+from html import escape
 from pathlib import Path
 
 SEVERITY_ORDER = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
@@ -163,7 +165,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="utf-8" />
 <title>GSC Audit - __SITE__</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
   html, body { background: #F5F4EF; color: #252525; font-family: 'Manrope', -apple-system, sans-serif; margin: 0; padding: 0; }
   .wrap { max-width: 880px; margin: 0 auto; padding: 56px 32px 80px; }
   h1 { font-weight: 700; font-size: 32px; margin: 0 0 8px; letter-spacing: -0.02em; }
@@ -189,8 +190,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <div class="wrap">
   <h1>GSC Audit</h1>
   <div class="meta">__SITE__ - generated __GENERATED_AT__<br />Confidence: <span class="conf __CONFIDENCE__">__CONFIDENCE__</span></div>
-  <h2>Findings</h2>
+  __CONTEXT__
+  <h2>Executive Summary</h2><ul>__SUMMARIES__</ul>
+  <h2>Action Plan</h2>
   <ul class="findings">__FINDINGS__</ul>
+  <h2>Per-Agent Output</h2>__AGENTS__
   <div class="footer">google-search-console-agent - __GENERATED_AT__</div>
 </div>
 </body>
@@ -198,29 +202,46 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 
 def _esc(s):
-    return (str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+    return escape(str(s), quote=True)
 
 
-def render_html(site_url, agents_output, confidence="medium"):
+def render_html(site_url, agents_output, confidence="medium", overview=None):
     findings = []
     for ao in agents_output:
         agent = ao.get("agent", "")
         for f in ao.get("findings", []):
             findings.append({**f, "source": agent})
+    from gsc_benchmarks import enrich_findings
+    findings = enrich_findings(findings)
     findings.sort(key=lambda f: SEVERITY_ORDER.get(f.get("severity", "Low"), 4))
     items = []
     for f in findings:
         sev = f.get("severity", "Low")
         cls = {"Critical": "crit", "High": "high", "Medium": "med", "Low": "low"}.get(sev, "low")
         items.append(
-            f'<li class="{cls}"><span class="sev">{sev}</span><strong>{_esc(f.get("title", ""))}</strong>'
+            f'<li class="{cls}"><span class="sev">{_esc(sev)}</span><strong>{_esc(f.get("title", ""))}</strong>'
+            f'<div>Source: {_esc(f["source"])}{_esc(_format_cwv_benchmark_md(f.get("benchmark")))}</div>'
             f'<div style="margin-top:6px;font-size:14px;color:#404040;">{_esc(f.get("detail", ""))}</div></li>'
         )
-    return (HTML_TEMPLATE
-            .replace("__SITE__", _esc(site_url))
-            .replace("__GENERATED_AT__", datetime.now().strftime("%Y-%m-%d %H:%M"))
-            .replace("__CONFIDENCE__", _esc(confidence))
-            .replace("__FINDINGS__", "".join(items) or "<li><em>No findings.</em></li>"))
+    if overview is None:
+        overview = next((a.get("data") for a in agents_output if a.get("agent") == "gsc-overview"), None)
+    context = render_property_context_md(site_url, overview).splitlines()
+    context_html = "<h2>Site Context</h2><ul>" + "".join(
+        f"<li>{_esc(line[2:])}</li>" for line in context if line.startswith("- ")) + "</ul>"
+    summaries = "".join(f"<li><strong>{_esc(a.get('agent', 'unknown'))}</strong>: "
+                        f"{_esc(a['summary'])}</li>" for a in agents_output if a.get("summary"))
+    agents = "".join(f"<h3>{_esc(a.get('agent', 'unknown'))}</h3>"
+                     f"<p>{_esc(a.get('summary', ''))}</p>"
+                     f"<pre>{_esc(json.dumps(a.get('data', {}), indent=2, default=str))}</pre>"
+                     for a in agents_output)
+    values = {"__SITE__": _esc(site_url), "__GENERATED_AT__": datetime.now().strftime('%Y-%m-%d %H:%M'),
+              "__CONFIDENCE__": _esc(confidence), "__CONTEXT__": context_html,
+              "__SUMMARIES__": summaries or "<li>No agent summaries provided.</li>",
+              "__AGENTS__": agents,
+              "__FINDINGS__": "".join(items) or "<li><em>No findings.</em></li>"}
+    # Substitute once: payload text resembling a placeholder remains literal.
+    return re.sub(r"__[A-Z_]+__", lambda m: values[m.group()], HTML_TEMPLATE)
+
 
 
 def render_pdf(html, output_path):

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include site context, summaries, benchmark verdicts and source data in HTML/PDF reports; escape supplied HTML values and remove remote font loading.
+
 - Base audit confidence on search availability and trend coverage, not SEO finding severity; expose partial search errors by source.
 
 - Compare equal calendar periods in audit trends and disclose missing dates instead of splitting returned rows.

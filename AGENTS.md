@@ -333,3 +333,11 @@ boundaries and missing-day counts. Missing or partial dates suppress the
 percentage and decline finding; absent rows are not silently treated as zero.
 A zero-click baseline has no percentage change. These are descriptive
 comparisons, not causal diagnoses or seasonality adjustments.
+
+## Report formats
+
+HTML and PDF include site context, source summaries, benchmark annotations,
+source labels and per-agent data, matching the Markdown sections. The audit
+passes its overview to all renderers. HTML escapes supplied values and uses
+local fonts; PDF rendering needs no font download. Reports contain source
+payloads and should be treated as private, regardless of format.
