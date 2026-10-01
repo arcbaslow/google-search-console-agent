@@ -363,3 +363,11 @@ search worker/subrequest failure or incomplete calendar-trend coverage.
 A High SEO finding alone does not lower confidence. Search errors are also
 listed by source under `data.source_errors`. This label does not estimate
 sampling, statistical certainty or the quality of other sources.
+
+## Report formats
+
+HTML and PDF include site context, source summaries, benchmark annotations,
+source labels and per-agent data, matching the Markdown sections. The audit
+passes its overview to all renderers. HTML escapes supplied values and uses
+local fonts; PDF rendering needs no font download. Reports contain source
+payloads and should be treated as private, regardless of format.

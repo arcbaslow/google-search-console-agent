@@ -97,3 +97,11 @@ Unexpected overview failure is retained as an error section by the audit driver;
 Sitemap error and warning counts are compared numerically, including Google API string values such as `"0"`; a zero count does not produce a finding.
 
 For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
+
+## Report formats
+
+HTML and PDF include site context, source summaries, benchmark annotations,
+source labels and per-agent data, matching the Markdown sections. The audit
+passes its overview to all renderers. HTML escapes supplied values and uses
+local fonts; PDF rendering needs no font download. Reports contain source
+payloads and should be treated as private, regardless of format.
