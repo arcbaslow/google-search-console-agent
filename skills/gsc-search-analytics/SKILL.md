@@ -115,7 +115,7 @@ sampling, statistical certainty or the quality of other sources.
 ## Explicit dates and fresh search data
 
 `gsc_data.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD` uses inclusive
-Search Console PT dates and overrides `--days`. Without explicit dates the
+Search Console PT dates and overrides `--days` (1-500). Without explicit dates the
 existing three-day lag remains; `--data-state all` alone does not remove it.
 Hourly custom reports require `--dimensions hour --data-state hourly_all`
 and both dates. Google limits hourly availability; incomplete-data metadata
@@ -125,8 +125,10 @@ Missing dates are not zero-filled. Offsets still fetch only one page.
 `--compare-previous` is a standalone mode requiring both dates. It makes two
 aggregate queries for adjacent equal periods, returning click/impression
 percentage changes, CTR percentage-point change and position difference.
-It never sums top rows. Zero baselines give null percentages; non-final data
-suppresses differences. Freshness and seasonality still need interpretation.
+It never sums top rows; Python calls also reject grouped/offset inputs. Zero
+baselines give null percentages; non-final data suppresses differences.
+Aggregate queries cannot establish daily coverage within the requested periods;
+check time-series coverage when interpreting recent windows or seasonality.
 
 ## Read transport and quotas
 

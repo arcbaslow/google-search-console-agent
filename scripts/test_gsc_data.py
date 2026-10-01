@@ -221,3 +221,20 @@ def test_cli_explicit_dates_and_comparison(monkeypatch, capsys):
     assert gsc_data.main() == 0
     assert query.call_count == 2
     assert '"clicks_change_pct": null' in capsys.readouterr().out
+
+@pytest.mark.parametrize("options", [{"dimensions": ["query"]}, {"start_row": 1}, {"row_limit": 100}])
+def test_python_comparison_rejects_top_row_inputs_before_requests(monkeypatch, options):
+    query = MagicMock()
+    monkeypatch.setattr(gsc_data, "query", query)
+    with pytest.raises(ValueError, match="ungrouped totals"):
+        gsc_data.compare_periods("example.com", "2026-01-01", "2026-01-07", **options)
+    query.assert_not_called()
+
+
+def test_fresh_aggregate_comparisons_do_not_publish_changes(monkeypatch):
+    query = MagicMock(return_value={"rows": [{"clicks": 1, "impressions": 10, "ctr": .1, "position": 2}]})
+    monkeypatch.setattr(gsc_data, "query", query)
+    out = gsc_data.compare_periods("example.com", "2026-01-01", "2026-01-07", data_state="all")
+    assert out["comparison_status"] == "partial_data_possible"
+    assert out["changes"] == {}
+    assert "daily coverage" in out["coverage"]
