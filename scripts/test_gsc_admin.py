@@ -230,3 +230,16 @@ def test_successful_sitemap_write_refetches_inventory_on_next_read(monkeypatch):
     gsc_admin.submit_sitemap("example.com", "https://example.com/sitemap.xml")
     assert gsc_admin.list_sitemaps("example.com") == [{"path": "https://example.com/sitemap.xml"}]
     assert read.call_count == 2
+
+def test_confirmed_write_http_error_is_never_retried(monkeypatch):
+    import httplib2
+    import pytest
+    from googleapiclient.errors import HttpError
+    service = MagicMock()
+    execute = service.sites().add().execute
+    execute.side_effect = HttpError(httplib2.Response({"status": "429"}), b'{}')
+    monkeypatch.setattr(gsc_admin, "_get_service", lambda **kw: service)
+    monkeypatch.setattr("builtins.input", lambda: "y")
+    with pytest.raises(HttpError):
+        gsc_admin.add_site("example.com")
+    execute.assert_called_once_with()

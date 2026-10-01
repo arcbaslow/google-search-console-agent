@@ -18,12 +18,18 @@ import sys
 from urllib.parse import urlsplit
 
 from gsc_auth import get_credentials
-from gsc_utils import cache_delete, cache_get, cache_set, normalize_site_url
+from gsc_utils import (
+    build_search_service,
+    cache_delete,
+    cache_get,
+    cache_set,
+    execute_read,
+    normalize_site_url,
+)
 
 
 def _get_service(write: bool = False):
-    from googleapiclient.discovery import build
-    return build("searchconsole", "v1", credentials=get_credentials(write=write), cache_discovery=False)
+    return build_search_service(get_credentials(write=write))
 
 
 # ---------- sites ----------
@@ -65,7 +71,7 @@ def list_sites():
     if cached is not None:
         return cached
     service = _get_service()
-    resp = service.sites().list().execute()
+    resp = execute_read(service.sites().list())
     out = [
         {"site_url": s.get("siteUrl"), "permission_level": s.get("permissionLevel")}
         for s in resp.get("siteEntry", [])
@@ -77,7 +83,7 @@ def list_sites():
 def get_site(site_url: str):
     service = _get_service()
     site_url = normalize_site_url(site_url)
-    return service.sites().get(siteUrl=site_url).execute()
+    return execute_read(service.sites().get(siteUrl=site_url))
 
 
 def add_site(site_url: str):
@@ -108,7 +114,7 @@ def list_sitemaps(site_url: str):
     if cached is not None:
         return cached
     service = _get_service()
-    resp = service.sitemaps().list(siteUrl=site_url).execute()
+    resp = execute_read(service.sitemaps().list(siteUrl=site_url))
     out = resp.get("sitemap", [])
     cache_set(out, "sitemaps", site_url)
     return out
@@ -117,7 +123,7 @@ def list_sitemaps(site_url: str):
 def get_sitemap(site_url: str, feedpath: str):
     site_url = normalize_site_url(site_url)
     service = _get_service()
-    return service.sitemaps().get(siteUrl=site_url, feedpath=feedpath).execute()
+    return execute_read(service.sitemaps().get(siteUrl=site_url, feedpath=feedpath))
 
 
 def submit_sitemap(site_url: str, feedpath: str):
@@ -159,7 +165,7 @@ def inspect_url(site_url: str, url: str, lang: str | None = None):
     body = {"inspectionUrl": url, "siteUrl": site_url}
     if lang:
         body["languageCode"] = lang
-    resp = service.urlInspection().index().inspect(body=body).execute()
+    resp = execute_read(service.urlInspection().index().inspect(body=body), retry=False)
     cache_set(resp, "inspect", site_url, url, lang)
     return resp
 
@@ -192,7 +198,7 @@ def main():
     try:
         out = _dispatch(args)
     except Exception as e:
-        print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
+        print(json.dumps({"error": str(e), "type": type(e).__name__, **getattr(e, "details", {})}), file=sys.stderr)
         return 1
 
     if out is None:

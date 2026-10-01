@@ -25,7 +25,15 @@ from datetime import date, timedelta
 from typing import Any
 
 from gsc_auth import get_credentials
-from gsc_utils import cache_get, cache_set, date_range, normalize_site_url, scrub_pii
+from gsc_utils import (
+    build_search_service,
+    cache_get,
+    cache_set,
+    date_range,
+    execute_read,
+    normalize_site_url,
+    scrub_pii,
+)
 
 _FILTER_RE = re.compile(
     r"^\s*(?P<dim>\w+)\s+(?P<op>=|!=|CONTAINS|EQUALS|NOT_CONTAINS|NOT_EQUALS|INCLUDING_REGEX|EXCLUDING_REGEX)\s+(?P<val>.+?)\s*$",
@@ -62,8 +70,7 @@ def parse_filter(expr: str | None) -> dict[str, Any] | None:
 
 
 def _get_service():
-    from googleapiclient.discovery import build
-    return build("searchconsole", "v1", credentials=get_credentials(), cache_discovery=False)
+    return build_search_service(get_credentials())
 
 
 def query(site_url: str, dimensions: list[str] | None = None, days: int = 28,
@@ -120,7 +127,7 @@ def query(site_url: str, dimensions: list[str] | None = None, days: int = 28,
             body["dimensionFilterGroups"] = [{"groupType": "and", "filters": [f]}]
 
     service = _get_service()
-    resp = service.searchanalytics().query(siteUrl=site_url, body=body).execute()
+    resp = execute_read(service.searchanalytics().query(siteUrl=site_url, body=body))
 
     rows_out = []
     for row in resp.get("rows", []):
@@ -283,7 +290,7 @@ def main():
             parser.print_help()
             return 1
     except Exception as e:
-        print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
+        print(json.dumps({"error": str(e), "type": type(e).__name__, **getattr(e, "details", {})}), file=sys.stderr)
         return 1
 
     print(json.dumps(result, indent=2, default=str))
