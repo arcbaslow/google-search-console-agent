@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Compare equal calendar periods in audit trends and disclose missing dates instead of splitting returned rows.
+
 - Reuse cached empty inventories and invalidate related site/sitemap lists after successful confirmed writes. Preserve write success with a cache warning if local invalidation fails.
 
 - Write shared JSON cache entries atomically, preserve the previous entry on write failure, and treat malformed JSON or invalid UTF-8 entries as cache misses.

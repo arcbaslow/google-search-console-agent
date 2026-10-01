@@ -31,7 +31,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -180,6 +180,37 @@ def run_overview(site_url):
     return _ok("gsc-overview", f"site overview for {site_url_norm}", findings, overview), overview
 
 
+def calendar_trend(series):
+    """Compare equal trailing calendar windows; missing dates are not zeroes."""
+    if not series.get("start_date") or not series.get("end_date"):
+        return {"status": "unavailable", "reason": "missing_date_range"}
+    start = date.fromisoformat(series["start_date"])
+    end = date.fromisoformat(series["end_date"])
+    size = ((end - start).days + 1) // 2
+    if size < 7:
+        return {"status": "unavailable", "reason": "fewer_than_two_weeks"}
+    recent_start = end - timedelta(days=size - 1)
+    previous_start = recent_start - timedelta(days=size)
+    rows = {r["date"]: r for r in series.get("rows", []) if r.get("date")}
+    out = {"days_per_period": size, "previous_start": str(previous_start),
+           "previous_end": str(recent_start - timedelta(days=1)),
+           "recent_start": str(recent_start), "recent_end": str(end),
+           "excluded_leading_days": (previous_start - start).days}
+    for name, first in (("previous", previous_start), ("recent", recent_start)):
+        keys = [str(first + timedelta(days=i)) for i in range(size)]
+        out[f"{name}_missing_days"] = sum(k not in rows for k in keys)
+        out[f"{name}_clicks"] = sum(rows[k].get("clicks", 0) for k in keys if k in rows)
+    out["change_pct"] = None
+    if out["previous_missing_days"] or out["recent_missing_days"] or series.get("metadata"):
+        out.update(status="incomplete", reason="missing_dates_or_partial_data")
+    elif not out["previous_clicks"]:
+        out.update(status="unavailable", reason="zero_previous_clicks")
+    else:
+        out.update(status="ok", change_pct=round(
+            (out["recent_clicks"] - out["previous_clicks"]) / out["previous_clicks"] * 100, 1))
+    return out
+
+
 def run_search_analytics(site_url, days=28):
     findings = []
     data: dict[str, Any] = {}
@@ -213,20 +244,17 @@ def run_search_analytics(site_url, days=28):
 
     try:
         data["time_series"] = gsc_data.time_series(site_url, days=max(days, 90))
-        ts_rows = data["time_series"]["rows"]
-        if len(ts_rows) >= 14:
-            mid = len(ts_rows) // 2
-            recent = sum(r.get("clicks", 0) for r in ts_rows[mid:])
-            previous = sum(r.get("clicks", 0) for r in ts_rows[:mid])
-            if previous:
-                change_pct = (recent - previous) / previous * 100
-                data["click_trend_change_pct"] = round(change_pct, 1)
-                if change_pct <= -20:
-                    findings.append({
-                        "severity": "High",
-                        "title": "Organic clicks down >20% in the second half of the window",
-                        "detail": f"First half: {previous:,} clicks; second half: {recent:,} clicks ({change_pct:+.1f}%).",
-                    })
+        trend = calendar_trend(data["time_series"])
+        data["click_trend"] = trend
+        change_pct = trend.get("change_pct")
+        if change_pct is not None:
+            data["click_trend_change_pct"] = change_pct
+            if change_pct <= -20:
+                findings.append({
+                    "severity": "High", "title": "Organic clicks down at least 20% vs prior period",
+                    "detail": f"Previous: {trend['previous_clicks']:,}; recent: {trend['recent_clicks']:,} "
+                              f"({change_pct:+.1f}%). Equal {trend['days_per_period']}-day calendar periods.",
+                })
     except Exception as e:
         findings.append({"severity": "Low", "title": "time series failed", "detail": str(e)})
 

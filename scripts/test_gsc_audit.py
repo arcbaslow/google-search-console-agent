@@ -92,9 +92,11 @@ def test_run_search_analytics_flags_traffic_drop(monkeypatch):
     monkeypatch.setattr(gsc_audit.gsc_data, "by_country", lambda *a, **kw: {"rows": []})
 
     # 90-day series: first 45 days strong, second 45 weak
-    ts_rows = [{"date": f"2026-{i:02d}", "clicks": 100} for i in range(45)] + \
-              [{"date": f"2026-{i:02d}", "clicks": 50} for i in range(45)]
-    monkeypatch.setattr(gsc_audit.gsc_data, "time_series", lambda *a, **kw: {"rows": ts_rows})
+    from datetime import date, timedelta
+    ts_rows = [{"date": str(date(2026, 1, 1) + timedelta(days=i)),
+                "clicks": 100 if i < 45 else 50} for i in range(90)]
+    monkeypatch.setattr(gsc_audit.gsc_data, "time_series", lambda *a, **kw: {
+        "rows": ts_rows, "start_date": "2026-01-01", "end_date": "2026-03-31"})
 
     out = gsc_audit.run_search_analytics("example.com", days=28)
     titles = [f["title"] for f in out["findings"]]
@@ -348,3 +350,26 @@ def test_header_failure_is_reported_once_with_other_source_results(monkeypatch):
     assert "headers unavailable" in out["summary"]
     assert "observatory A" in out["summary"]
     assert "ssl-labs A" in out["summary"]
+
+def test_calendar_trend_uses_equal_windows_and_ignores_leading_odd_day():
+    series = {"start_date": "2026-01-01", "end_date": "2026-01-15",
+              "rows": [{"date": f"2026-01-{i:02d}", "clicks": 999 if i == 1 else 10}
+                       for i in range(1, 16)]}
+    result = gsc_audit.calendar_trend(series)
+    assert result["change_pct"] == 0
+    assert result["previous_start"] == "2026-01-02"
+    assert result["days_per_period"] == 7
+    assert result["excluded_leading_days"] == 1
+    series["rows"].pop()
+    result = gsc_audit.calendar_trend(series)
+    assert result["status"] == "incomplete"
+    assert result["recent_missing_days"] == 1
+    assert result["change_pct"] is None
+
+
+def test_calendar_trend_zero_baseline_and_partial_data_have_no_percentage():
+    series = {"start_date": "2026-01-01", "end_date": "2026-01-14",
+              "rows": [{"date": f"2026-01-{i:02d}", "clicks": 0} for i in range(1, 15)]}
+    assert gsc_audit.calendar_trend(series)["reason"] == "zero_previous_clicks"
+    series["metadata"] = {"first_incomplete_date": "2026-01-14"}
+    assert gsc_audit.calendar_trend(series)["status"] == "incomplete"

@@ -25,8 +25,8 @@ Optional `--search-type` (`web` / `image` / `video` / `news` / `discover`
 
 ### Time-series
 
-- Split the 90-day window in half; compare clicks in the second half to
-  the first half. A drop of ≥20% is a High finding.
+- Compare equal calendar periods using the coverage rules below. A complete
+  comparison showing a drop of ≥20% is a High finding.
 - A drop of ≥40% is Critical and worth checking for an algorithm update
   or a robots / canonical regression.
 
@@ -112,3 +112,12 @@ replacement leaves the previous entry intact. Missing, expired, invalid-JSON
 and invalid-UTF-8 entries are cache misses; permission and write failures
 remain errors. The 15-minute TTL is unchanged. This applies to the shared
 JSON cache, not the separate Tranco CSV cache.
+
+## Calendar trend comparisons
+
+Audit click trends compare equal trailing calendar periods of at least seven
+days each. An odd window excludes its earliest day. Output includes period
+boundaries and missing-day counts. Missing or partial dates suppress the
+percentage and decline finding; absent rows are not silently treated as zero.
+A zero-click baseline has no percentage change. These are descriptive
+comparisons, not causal diagnoses or seasonality adjustments.

@@ -28,7 +28,7 @@ metadata:
 ## What the audit covers
 
 - **Site overview**: permission level, registered sitemap count + last submission, homepage HTTP probe (framework / platform hints)
-- **Search analytics**: top 50 queries, top 50 pages, device + country splits, 90-day time-series with a recent-vs-prior-half clicks delta
+- **Search analytics**: top 50 queries, top 50 pages, device + country splits, at least 90 days of time-series with an equal-calendar-period clicks delta
 - **CTR-vs-position curve**: queries with weak CTR for their average rank (usually a title / meta-description fix)
 - **Sitemap health**: error and warning counts per registered sitemap
 - **Core Web Vitals**: CrUX origin snapshot for LCP / INP / CLS / FCP / TTFB classified against Google's official good / needs-improvement / poor bands; optional 25-week history
@@ -80,3 +80,12 @@ The driver never bulk-inspects URLs. A failed search worker lowers confidence.
 Other optional-source failures do not change the existing confidence label.
 
 For URL-prefix properties, the audit derives CrUX origins from scheme and authority only. Domain-rank comparisons use the exact hostname, not the property path or a suffix match. Search Console requests keep the original property.
+
+## Calendar trend comparisons
+
+Audit click trends compare equal trailing calendar periods of at least seven
+days each. An odd window excludes its earliest day. Output includes period
+boundaries and missing-day counts. Missing or partial dates suppress the
+percentage and decline finding; absent rows are not silently treated as zero.
+A zero-click baseline has no percentage change. These are descriptive
+comparisons, not causal diagnoses or seasonality adjustments.

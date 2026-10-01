@@ -94,3 +94,12 @@ replacement leaves the previous entry intact. Missing, expired, invalid-JSON
 and invalid-UTF-8 entries are cache misses; permission and write failures
 remain errors. The 15-minute TTL is unchanged. This applies to the shared
 JSON cache, not the separate Tranco CSV cache.
+
+## Calendar trend comparisons
+
+Audit click trends compare equal trailing calendar periods of at least seven
+days each. An odd window excludes its earliest day. Output includes period
+boundaries and missing-day counts. Missing or partial dates suppress the
+percentage and decline finding; absent rows are not silently treated as zero.
+A zero-click baseline has no percentage change. These are descriptive
+comparisons, not causal diagnoses or seasonality adjustments.

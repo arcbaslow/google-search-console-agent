@@ -210,3 +210,12 @@ invalidation fails after the API succeeds, the success status is preserved
 with `cache_warning`; surface it and do not repeat the remote write. Cache
 invalidation does not guarantee upstream read-after-write consistency or
 serialize independent processes that already have a read in flight.
+
+## Calendar trend comparisons
+
+Audit click trends compare equal trailing calendar periods of at least seven
+days each. An odd window excludes its earliest day. Output includes period
+boundaries and missing-day counts. Missing or partial dates suppress the
+percentage and decline finding; absent rows are not silently treated as zero.
+A zero-click baseline has no percentage change. These are descriptive
+comparisons, not causal diagnoses or seasonality adjustments.
