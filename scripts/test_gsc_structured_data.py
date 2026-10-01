@@ -140,7 +140,7 @@ def test_analyze_url_fetch_failure(monkeypatch):
 # ---------- analyze_sitemap_sample ----------
 
 def test_analyze_sitemap_sample_no_urls(monkeypatch):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_sitemap_urls", lambda site, limit: [])
+    monkeypatch.setattr(gsc_structured_data, "_fetch_sitemap_urls", lambda site, limit, **kw: [])
     out = gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=10)
     assert out["error"] == "no_sitemap_urls"
 
@@ -148,7 +148,7 @@ def test_analyze_sitemap_sample_no_urls(monkeypatch):
 def test_analyze_sitemap_sample_rolls_up(monkeypatch):
     urls = [f"https://example.com/p/{i}" for i in range(5)]
     monkeypatch.setattr(gsc_structured_data, "_fetch_sitemap_urls",
-                        lambda site, limit: urls)
+                        lambda site, limit, **kw: urls)
     monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url: PRODUCT_HTML)
     out = gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=5)
     assert out["sample_size"] == 5
@@ -206,3 +206,54 @@ def test_rollup_preserves_invalid_and_unsupported_and_fetch_failures():
     assert result["fetch_failures"] == 1
     assert result["block_verdicts"]["invalid"] == 1
     assert result["block_verdicts"]["unsupported"] == 1
+
+def test_sitemap_namespaces_entities_duplicates_and_stable_sampling(monkeypatch):
+    xml = """<s:urlset xmlns:s="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <s:url><s:loc>https://example.com/a?x=1&amp;y=2</s:loc></s:url>
+    <s:url><s:loc>https://example.com/b</s:loc></s:url>
+    <s:url><s:loc>https://example.com/b</s:loc></s:url>
+    <s:url><s:loc>https://outside.test/a</s:loc></s:url></s:urlset>"""
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: xml)
+    info = {}
+    first = gsc_structured_data._fetch_sitemap_urls("example.com", 10, diagnostics=info)
+    assert set(first) == {"https://example.com/a?x=1&y=2", "https://example.com/b"}
+    assert gsc_structured_data._fetch_sitemap_urls("example.com", 10) == first
+    assert info["discovered_urls"] == 2
+    assert info["excluded_urls"] == 1
+    assert info["exhaustive"] is False
+
+
+def test_sitemap_traversal_is_bounded_and_prefix_is_retained(monkeypatch):
+    from unittest.mock import MagicMock
+    index = '<sitemapindex>' + ''.join(
+        f'<sitemap><loc>https://example.com/child{i}.xml</loc></sitemap>' for i in range(20)) + '</sitemapindex>'
+    fetch = MagicMock(side_effect=lambda url: index if url.endswith('sitemap.xml') else
+        '<urlset><url><loc>https://example.com/shop/a</loc></url>'
+        '<url><loc>https://example.com/outside</loc></url></urlset>')
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", fetch)
+    result = gsc_structured_data._fetch_sitemap_urls("https://example.com/shop/", 10)
+    assert result == ["https://example.com/shop/a"]
+    assert fetch.call_count == 6
+    assert fetch.call_args_list[0].args[0] == "https://example.com/shop/sitemap.xml"
+
+
+@pytest.mark.parametrize("xml", ["<urlset>", '<!DOCTYPE urlset [<!ENTITY x "hi">]><urlset/>'])
+def test_invalid_sitemaps_are_disclosed(monkeypatch, xml):
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: xml)
+    result = gsc_structured_data.analyze_sitemap_sample("example.com")
+    assert result["error"] == "no_sitemap_urls"
+    assert result["sampling"]["sitemap_requests"] == 2
+    assert all(x["error"] == "invalid_sitemap" for x in result["sampling"]["issues"])
+
+
+@pytest.mark.parametrize("limit", [0, -1, 101, True])
+def test_sample_limits_fail_before_fetch(monkeypatch, limit):
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: pytest.fail("no fetch"))
+    with pytest.raises(ValueError, match="between 1 and 100"):
+        gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=limit)
+
+def test_prefix_without_slash_does_not_include_host_suffix(monkeypatch):
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: '<urlset>'
+        '<url><loc>https://example.com.evil.test/a</loc></url>'
+        '<url><loc>https://example.com/a</loc></url></urlset>')
+    assert gsc_structured_data._fetch_sitemap_urls("https://example.com", 10) == ["https://example.com/a"]

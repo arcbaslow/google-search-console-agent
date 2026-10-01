@@ -20,13 +20,15 @@ CLI:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import random
 import re
 import sys
 import urllib.error
 import urllib.request
+import xml.etree.ElementTree as ET
 from typing import Any
+from urllib.parse import urlsplit
 
 FETCH_TIMEOUT_S = 15
 USER_AGENT = "google-search-console-agent/0.2 (+structured-data)"
@@ -207,36 +209,93 @@ def _count_verdicts(validations: list[dict[str, Any]]) -> dict[str, int]:
 
 # ---------- Sitemap-wide sample ----------
 
-def _fetch_sitemap_urls(site_url: str, limit: int) -> list[str]:
-    """Pull a sample of URLs from the site's sitemap.xml. The function
-    follows sitemap-index files once. Returns at most `limit` URLs."""
+def _sitemap_entries(text):
+    # Sitemaps need no DTD or custom entities. Bound bytes in _fetch_text too.
+    if "<!DOCTYPE" in text.upper() or "<!ENTITY" in text.upper():
+        raise ValueError("DTD and custom entities are not supported")
+    root = ET.fromstring(text)
+    kind = root.tag.rsplit("}", 1)[-1]
+    if kind not in ("urlset", "sitemapindex"):
+        raise ValueError("expected urlset or sitemapindex")
+    item_tag = "url" if kind == "urlset" else "sitemap"
+    locations = []
+    for item in root:
+        if item.tag.rsplit("}", 1)[-1] != item_tag:
+            continue
+        for child in item:
+            if child.tag.rsplit("}", 1)[-1] == "loc" and child.text:
+                url = child.text.strip()
+                parsed = urlsplit(url)
+                if parsed.scheme in ("http", "https") and parsed.hostname and not parsed.username:
+                    locations.append(url)
+    return kind, locations
+
+
+def _fetch_sitemap_urls(site_url: str, limit: int, *, diagnostics=None) -> list[str]:
+    """Bounded one-level sitemap discovery with a stable hash-ordered sample."""
     from gsc_utils import normalize_site_url
 
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError("sample size must be an integer between 1 and 100")
     site_url = normalize_site_url(site_url)
-    if site_url.startswith("sc-domain:"):
-        origin = "https://" + site_url[len("sc-domain:"):].rstrip("/")
-    else:
-        origin = site_url.rstrip("/")
-    candidates = [origin + "/sitemap.xml", origin + "/sitemap_index.xml"]
-    urls: list[str] = []
-    for sm in candidates:
-        text = _fetch_text(sm)
+    origin = ("https://" + site_url[len("sc-domain:"):]
+              if site_url.startswith("sc-domain:") else site_url).rstrip("/")
+    info = diagnostics if diagnostics is not None else {}
+    info.update(method="sha256_url_order", sitemap_requests=0, discovered_urls=0,
+                excluded_urls=0, issues=[], exhaustive=False)
+    urls = set()
+    visited = set()
+    children_left = 5
+
+    def read(url):
+        if url in visited:
+            return None
+        visited.add(url)
+        info["sitemap_requests"] += 1
+        text = _fetch_text(url)
         if not text:
+            info["issues"].append({"url": url, "error": "fetch_failed_or_empty"})
+            return None
+        try:
+            return _sitemap_entries(text)
+        except (ET.ParseError, ValueError):
+            info["issues"].append({"url": url, "error": "invalid_sitemap"})
+            return None
+
+    for root_url in [origin + "/sitemap.xml", origin + "/sitemap_index.xml"]:
+        result = read(root_url)
+        if result is None:
             continue
-        if "<sitemapindex" in text.lower():
-            inner = re.findall(r"<loc>\s*(.*?)\s*</loc>", text, re.I | re.S)
-            for child in inner[:5]:  # follow at most 5 child sitemaps
-                child_text = _fetch_text(child.strip())
-                if child_text:
-                    urls.extend(re.findall(r"<loc>\s*(.*?)\s*</loc>", child_text, re.I | re.S))
+        kind, locations = result
+        if kind == "urlset":
+            urls.update(locations)
         else:
-            urls.extend(re.findall(r"<loc>\s*(.*?)\s*</loc>", text, re.I | re.S))
+            for child in locations:
+                if child in visited:
+                    continue
+                if children_left == 0:
+                    break
+                children_left -= 1
+                result = read(child)
+                if result and result[0] == "urlset":
+                    urls.update(result[1])
+                elif result:
+                    info["issues"].append({"url": child, "error": "nested_index_not_followed"})
         if urls:
             break
-    if not urls:
-        return []
-    random.shuffle(urls)
-    return urls[:limit]
+    # Keep discovery relative to the supplied prefix, and sample only its URLs.
+    if site_url.startswith("sc-domain:"):
+        domain = site_url[len("sc-domain:"):].lower()
+        eligible = {u for u in urls if (urlsplit(u).hostname or "").lower() == domain
+                    or (urlsplit(u).hostname or "").lower().endswith("." + domain)}
+    else:
+        prefix = urlsplit(site_url)
+        eligible = {u for u in urls if urlsplit(u).scheme == prefix.scheme
+                    and urlsplit(u).netloc.lower() == prefix.netloc.lower()
+                    and urlsplit(u).path.startswith(prefix.path)}
+    info["discovered_urls"] = len(eligible)
+    info["excluded_urls"] = len(urls) - len(eligible)
+    return sorted(eligible, key=lambda u: (hashlib.sha256(u.encode()).hexdigest(), u))[:limit]
 
 
 def _fetch_text(url: str) -> str | None:
@@ -250,14 +309,16 @@ def _fetch_text(url: str) -> str | None:
 
 
 def analyze_sitemap_sample(site_url: str, sample_size: int = 20) -> dict[str, Any]:
-    urls = _fetch_sitemap_urls(site_url, sample_size)
+    sampling = {}
+    urls = _fetch_sitemap_urls(site_url, sample_size, diagnostics=sampling)
     if not urls:
-        return {"site_url": site_url, "error": "no_sitemap_urls"}
+        return {"site_url": site_url, "error": "no_sitemap_urls", "sampling": sampling}
     per_url = [analyze_url(u) for u in urls]
     rollup = _rollup(per_url)
     return {
         "site_url": site_url,
         "sample_size": len(urls),
+        "sampling": sampling,
         "rollup": rollup,
         "per_url": per_url,
     }
