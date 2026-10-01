@@ -39,7 +39,7 @@ Please do not file public issues for security problems.
 - Service account / external account:
   `GOOGLE_APPLICATION_CREDENTIALS` env var
 - Open PageRank API key:
-  `OPENPAGERANK_API_KEY` env var only — never persisted on disk
+  `OPENPAGERANK_V1_API_KEY` env var or explicit `--api-key` — never persisted on disk
 
 Google credentials are used by the Google adapters. The optional Open
 PageRank key is intentionally sent to its configured API endpoint; it is

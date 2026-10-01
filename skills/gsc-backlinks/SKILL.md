@@ -17,11 +17,11 @@ the hole with two free sources that, combined, answer the question
 audits keep asking: "how authoritative is this site vs the competitors
 we care about?"
 
-- **Open PageRank** — optional legacy GET integration using
-  `OPENPAGERANK_API_KEY`, at most 100 domains/request. Current
-  [upstream documentation](https://openpagerank.keywordseverywhere.com/docs)
-  describes a different API. Legacy availability and new-key compatibility
-  are unverified; do not send new keys to the legacy host without review.
+- **Open PageRank** — current POST bulk API, at most 100 entries/request.
+  Set `OPENPAGERANK_V1_API_KEY` to a new `opr_live_` key. Old DomCop keys
+  are retired; see the migration instructions below. Quota headers and
+  host/domain score scope are retained.
+
 - **Tranco top-1M** — no key, no signup. Downloaded once and cached
   locally; refreshed weekly. Tells you whether the domain is in the
   global top 1k / 10k / 100k / 1M, which is a coarse but honest
@@ -46,8 +46,8 @@ we care about?"
 ## Setup
 
 ```
-# Only use a compatible legacy key; current API migration is pending
-export OPENPAGERANK_API_KEY="opr_xxxxxxxxxxxxxxxxxxxx"
+# Obtain a new OPR key from the current dashboard
+export OPENPAGERANK_V1_API_KEY="opr_live_xxxxxxxxxxxxxxxxxxxx"
 
 python scripts/gsc_backlinks.py --domain example.com --json
 ```
@@ -90,8 +90,23 @@ results remain available if Open PageRank fails. The audit checks both
 sources even without competitors, reports unavailable sources, and matches
 the primary domain exactly when comparing ranks.
 
-This branch retains the legacy Open PageRank endpoint. Current docs describe
-new authentication and response fields; migration requires a separate review.
+Open PageRank uses the current POST API and a newly issued OPR key.
+Legacy environment keys are never transferred to the new host.
 See [the roadmap](../../docs/ROADMAP.md) for endpoint and terms evidence. Tranco data
 has upstream attribution and license conditions; downloaded lists are not
 covered by this repository's MIT license.
+
+## Open PageRank key migration
+
+The adapter now calls `https://openpagerank.keywordseverywhere.com/v1/domains/bulk`
+with Bearer authentication. Obtain a new `opr_live_` key from the upstream
+[dashboard and docs](https://openpagerank.keywordseverywhere.com/docs), then set
+`OPENPAGERANK_V1_API_KEY` or pass `--api-key`. `OPENPAGERANK_API_KEY` is ignored;
+old DomCop keys are retired. No key is automatically forwarded to the new host.
+
+One request accepts up to 100 entries and disables monthly history. Output
+preserves score, domain/host rank scope, release date and quota headers. Missing
+domains have null scores; the old integer score remains null. Host results are
+matched exactly, with the documented `www` alias. Quota errors retain retry
+hints without automatic retries. Scores remain proprietary service output,
+not a vendored backlink index. Live authentication has not been tested.

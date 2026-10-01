@@ -104,7 +104,7 @@ python scripts/gsc_audit.py --site example.com --with-backlinks --output audit.m
 python scripts/gsc_audit.py --site example.com --with-page-experience --output audit.md
 ```
 
-Open PageRank requires `OPENPAGERANK_API_KEY`; Tranco can run without it. Page-experience checks contact third-party services and can take longer than the main audit. URL inspection is intended for targeted checks, not unrestricted bulk crawling.
+Open PageRank requires a new OPR key in `OPENPAGERANK_V1_API_KEY`; Tranco can run without it. Page-experience checks contact third-party services and can take longer than the main audit. URL inspection is intended for targeted checks, not unrestricted bulk crawling.
 
 ### Agent workflow
 

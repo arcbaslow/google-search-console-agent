@@ -3,10 +3,9 @@ Backlinks / domain-authority adapter.
 
 Two free data sources are bundled:
 
-  1. Open PageRank — optional legacy GET integration, up to 100 domains
-     per request. Set OPENPAGERANK_API_KEY only for a compatible legacy key.
-     Current upstream docs describe a different endpoint/auth contract;
-     migration and legacy availability remain unverified. See docs/ROADMAP.md.
+  1. Open PageRank — current POST bulk API, up to 100 domains per request.
+     Set OPENPAGERANK_V1_API_KEY to a newly issued OPR key. Legacy keys are
+     not forwarded to the new host. Source scores are informational.
 
   2. Tranco top-1M list — a combined popularity ranking using Umbrella,
      Majestic, Farsight, CrUX and Cloudflare inputs.
@@ -38,7 +37,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-OPENPAGERANK_URL = "https://openpagerank.com/api/v1.0/getPageRank"
+OPENPAGERANK_URL = "https://openpagerank.keywordseverywhere.com/v1/domains/bulk"
 TRANCO_URL = "https://tranco-list.eu/top-1m.csv.zip"
 TRANCO_CACHE = Path.home() / ".claude" / "gsc-cache" / "tranco.csv"
 TRANCO_REFRESH_SECONDS = 7 * 24 * 3600  # rebuild weekly
@@ -58,58 +57,67 @@ def _strip_scheme(host: str) -> str:
 # ---------- Open PageRank ----------
 
 def query_open_pagerank(domains: list[str], api_key: str | None = None) -> dict:
-    """Query Open PageRank for a list of bare domains. Returns a dict keyed
-    by domain plus a `rate_limit` block. Returns `{"error": ...}` when no
-    API key is configured."""
-    api_key = api_key or os.environ.get("OPENPAGERANK_API_KEY")
+    """One current-API request. Legacy environment keys are never forwarded."""
+    api_key = api_key or os.environ.get("OPENPAGERANK_V1_API_KEY")
     if not api_key:
-        return {
-            "error": "no_api_key",
-            "hint": (
-                "Set OPENPAGERANK_API_KEY for a compatible legacy key. Current docs: "
-                "https://openpagerank.keywordseverywhere.com/docs . "
-                "This adapter still uses the legacy API; new-key compatibility is unverified."
-            ),
-        }
+        return {"error": "no_api_key", "hint":
+                "Create a new OPR key at https://openpagerank.keywordseverywhere.com/docs "
+                "and set OPENPAGERANK_V1_API_KEY. Legacy OPENPAGERANK_API_KEY is not used."}
     if not domains:
         return {"error": "no_domains"}
-
     if len(domains) > 100:
         return {"error": "too_many_domains", "limit": 100,
                 "message": "Request at most 100 domains explicitly; no domains were sent."}
-
-    qs_parts = [("domains[]", d) for d in domains]
-    url = f"{OPENPAGERANK_URL}?{urllib.parse.urlencode(qs_parts)}"
-    req = urllib.request.Request(
-        url,
-        headers={"API-OPR": api_key, "Accept": "application/json"},
-    )
+    if not api_key.startswith("opr_live_"):
+        return {"error": "migration_required", "hint": "Use a newly issued opr_live_ key; legacy keys are not supported."}
+    req = urllib.request.Request(OPENPAGERANK_URL,
+        data=json.dumps({"domains": domains, "include_history": False}).encode(),
+        headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json",
+                 "Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_SECONDS) as resp:
             data = json.loads(resp.read().decode("utf-8"))
+            budgets = _opr_budgets(resp.headers)
     except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        return {"error": f"http_{e.code}", "message": body[:300]}
+        try:
+            error = json.loads(e.read().decode("utf-8"))
+        except (ValueError, UnicodeError):
+            error = {}
+        detail = error.get("error") or {}
+        return {"error": f"http_{e.code}", "error_type": detail.get("type") if isinstance(detail, dict) else None,
+                "rate_limit": _opr_budgets(e.headers), "retry_after": e.headers.get("Retry-After"),
+                "message": "Open PageRank request failed; check the reported quota or authentication status."}
     except (urllib.error.URLError, TimeoutError) as e:
         return {"error": "transport", "message": str(e)}
-
     results = {}
-    for item in data.get("response", []):
+    for item in data.get("results", []):
         domain = item.get("domain")
-        if not domain:
-            continue
-        results[domain] = {
-            "rank": _to_int(item.get("rank")),
-            "page_rank_decimal": _to_float(item.get("page_rank_decimal")),
-            "page_rank_integer": _to_int(item.get("page_rank_integer")),
-            "status": item.get("status_code"),
-            "error": item.get("error") or None,
-        }
-    return {
-        "results": results,
-        "rate_limit": data.get("rate_limit", {}),
-        "source": "open_pagerank",
-    }
+        if domain:
+            results[domain] = _opr_row(item, "domain")
+        for host in item.get("hosts", []):
+            if host.get("host"):
+                results[host["host"]] = _opr_row(host, "host")
+    for domain in domains:
+        if domain.startswith("www.") and domain not in results and domain[4:] in results:
+            results[domain] = {**results[domain[4:]], "source_domain": domain[4:]}
+    return {"results": results, "rate_limit": budgets, "source": "open_pagerank",
+            "as_of": data.get("as_of"), "invalid": data.get("invalid", [])}
+
+
+def _opr_budgets(headers):
+    names = ("X-Domains-Limit", "X-Domains-Remaining", "X-Domains-Reset",
+             "X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset")
+    return {name: headers.get(name) for name in names if headers.get(name) is not None}
+
+
+def _opr_row(item, scope):
+    found = item.get("found") is True
+    return {"rank": _to_int(item.get("rank")) if found else None,
+            "page_rank_decimal": _to_float(item.get("open_page_rank")) if found else None,
+            "page_rank_integer": None, "status": 200 if found else 404,
+            "error": None if found else "not_found", "rank_scope": scope,
+            "referring_domains": item.get("referring_domains"),
+            "referring_hosts": item.get("referring_hosts")}
 
 
 def _to_int(v):
@@ -206,6 +214,7 @@ def domain_authority(domain: str, api_key: str | None = None) -> dict:
         result = opr["results"].get(domain) or {}
         out["open_pagerank"] = result
         out["open_pagerank_rate_limit"] = opr.get("rate_limit")
+        out["open_pagerank_as_of"] = opr.get("as_of")
     else:
         out["open_pagerank_error"] = opr["error"]
         out["open_pagerank_hint"] = opr.get("hint") or opr.get("message")
@@ -219,6 +228,8 @@ def compare_domains(domains: list[str], api_key: str | None = None) -> dict:
     out: dict = {"primary": domains[0] if domains else None, "rows": _tranco_rows(domains)}
 
     opr = _open_pagerank_result(domains, api_key)
+    out["open_pagerank_rate_limit"] = opr.get("rate_limit", {})
+    out["open_pagerank_as_of"] = opr.get("as_of")
     opr_results = opr.get("results", {}) if "error" not in opr else {}
     if "error" in opr:
         out["open_pagerank_error"] = opr["error"]
@@ -230,6 +241,8 @@ def compare_domains(domains: list[str], api_key: str | None = None) -> dict:
             row["open_pagerank_decimal"] = opr_row.get("page_rank_decimal")
             row["open_pagerank_integer"] = opr_row.get("page_rank_integer")
             row["open_pagerank_rank"] = opr_row.get("rank")
+            row["open_pagerank_rank_scope"] = opr_row.get("rank_scope")
+            row["open_pagerank_status"] = opr_row.get("status")
 
     return out
 
@@ -253,7 +266,7 @@ def main():
     parser.add_argument("--domain", help="Single domain lookup")
     parser.add_argument("--compare", help="Comma-separated list of domains")
     parser.add_argument("--tranco", metavar="DOMAIN", help="Tranco-only lookup")
-    parser.add_argument("--api-key", help="Override OPENPAGERANK_API_KEY for this call")
+    parser.add_argument("--api-key", help="New OPR key; overrides OPENPAGERANK_V1_API_KEY for this call")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
