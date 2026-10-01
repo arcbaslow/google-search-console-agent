@@ -68,3 +68,13 @@ URL Inspection is a separate, explicit single-URL action, never a batch loop.
 - [Article](https://developers.google.com/search/docs/appearance/structured-data/article)
 - [Recipe](https://developers.google.com/search/docs/appearance/structured-data/recipe)
 - [Documentation updates and retirements](https://developers.google.com/search/updates)
+
+## Sitemap sample bounds
+
+Structured-data sitemap sampling uses XML namespaces and entity decoding,
+deduplicates URLs and orders them by SHA-256 for repeatable samples. `--sample`
+accepts 1-100. Discovery tries two sitemap names relative to the supplied
+property path and follows at most five child files total, one level deep.
+DTD/custom entities are rejected. Only URLs within the supplied property are
+sampled. `sampling` reports discovered/excluded counts, requests and errors;
+it is explicitly non-exhaustive. Fetch coverage remains in `rollup`.

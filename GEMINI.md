@@ -228,3 +228,13 @@ source labels and per-agent data, matching the Markdown sections. The audit
 passes its overview to all renderers. HTML escapes supplied values and uses
 local fonts; PDF rendering needs no font download. Reports contain source
 payloads and should be treated as private, regardless of format.
+
+## Sitemap sample bounds
+
+Structured-data sitemap sampling uses XML namespaces and entity decoding,
+deduplicates URLs and orders them by SHA-256 for repeatable samples. `--sample`
+accepts 1-100. Discovery tries two sitemap names relative to the supplied
+property path and follows at most five child files total, one level deep.
+DTD/custom entities are rejected. Only URLs within the supplied property are
+sampled. `sampling` reports discovered/excluded counts, requests and errors;
+it is explicitly non-exhaustive. Fetch coverage remains in `rollup`.
