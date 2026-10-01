@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reject invalid Core Web Vitals values without assigning a performance band or interrupting report rendering.
+
 - Preserve Open PageRank quota diagnostics in domain CLI results and normalize rank lookup hostnames consistently.
 
 - Add best-effort report redaction after data retrieval, preserving exact request targets and raw cache contracts.

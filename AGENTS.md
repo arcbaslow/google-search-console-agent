@@ -446,3 +446,9 @@ Both single-domain and comparison output retain Open PageRank error type,
 retry hint and quota headers when the API fails. Rank lookup targets use the
 normalized hostname, removing ports and paths; original Search Console
 properties are not changed.
+
+## Invalid benchmark values
+
+CWV comparisons reject negative, nonnumeric, boolean and nonfinite values with
+`invalid_metric_value`. Invalid values receive no band or verdict. Reports
+retain the finding and continue benchmarking valid findings from other sources.

@@ -117,3 +117,9 @@ in memory. This repairs omitted quota attribution; it does not enable APIs,
 grant project permissions or prove OAuth scope compatibility. Live scope and
 project verification remains an operator task. PSI field CLS scaling remains
 unmodified pending an authoritative unit contract.
+
+## Invalid benchmark values
+
+CWV comparisons reject negative, nonnumeric, boolean and nonfinite values with
+`invalid_metric_value`. Invalid values receive no band or verdict. Reports
+retain the finding and continue benchmarking valid findings from other sources.
