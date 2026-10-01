@@ -72,3 +72,13 @@ Use `--history --periods 40` for the maximum history; default remains 25.
 Periods are overlapping 28-day aggregates sampled weekly. `ALL_FORM_FACTORS`
 omits the wire filter. Missing p75 values are null, not zeros. Only LCP,
 INP and CLS determine the Core Web Vitals pass; FCP/TTFB are diagnostics.
+
+## CrUX diagnostic detail
+
+`gsc_crux.py --diagnostics` preserves all returned metric objects under
+`diagnostics.metrics`, for snapshots and history. This includes available
+histograms, fractions, LCP image subparts/resource types and round-trip time.
+It uses the same single API request; absent metrics stay absent and missing
+values become null. History distributions remain aligned to collection
+periods. These diagnostics do not add Core Web Vitals or pass/fail thresholds.
+Default compact output is unchanged.

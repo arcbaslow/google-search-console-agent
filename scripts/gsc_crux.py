@@ -74,7 +74,7 @@ def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
 
 def query_record(origin: str | None = None, url: str | None = None,
                  form_factor: str = "ALL_FORM_FACTORS",
-                 use_cache: bool = True) -> dict[str, Any]:
+                 use_cache: bool = True, diagnostics: bool = False) -> dict[str, Any]:
     """Snapshot of the last-28-day CrUX record for `origin` OR `url` (one or
     the other, not both)."""
     if (origin and url) or (not origin and not url):
@@ -82,7 +82,7 @@ def query_record(origin: str | None = None, url: str | None = None,
     if form_factor not in FORM_FACTORS:
         raise ValueError(f"form_factor must be one of {FORM_FACTORS}")
 
-    cache_args = ("crux_record_v2", origin, url, form_factor)
+    cache_args = ("crux_record_v3", origin, url, form_factor, diagnostics)
     if use_cache:
         cached = cache_get(*cache_args)
         if cached:
@@ -97,7 +97,7 @@ def query_record(origin: str | None = None, url: str | None = None,
         body["url"] = url
 
     resp = _post(CRUX_QUERY_URL, body)
-    out = _flatten_record(resp, origin or url, form_factor)
+    out = _flatten_record(resp, origin or url, form_factor, diagnostics=diagnostics)
     if use_cache:
         cache_set(out, *cache_args)
     return out
@@ -106,7 +106,7 @@ def query_record(origin: str | None = None, url: str | None = None,
 def query_history(origin: str | None = None, url: str | None = None,
                   form_factor: str = "ALL_FORM_FACTORS",
                   collection_period_count: int = 25,
-                  use_cache: bool = True) -> dict[str, Any]:
+                  use_cache: bool = True, diagnostics: bool = False) -> dict[str, Any]:
     """Week-by-week CrUX history (up to 40 weeks). Returns the same shape as
     query_record but each metric is a list of weekly p75 values + categories."""
     if (origin and url) or (not origin and not url):
@@ -116,7 +116,7 @@ def query_history(origin: str | None = None, url: str | None = None,
 
     if type(collection_period_count) is not int or not 1 <= collection_period_count <= 40:
         raise ValueError("collection_period_count must be an integer between 1 and 40")
-    cache_args = ("crux_history_v2", origin, url, form_factor, collection_period_count)
+    cache_args = ("crux_history_v3", origin, url, form_factor, collection_period_count, diagnostics)
     if use_cache:
         cached = cache_get(*cache_args)
         if cached:
@@ -133,7 +133,7 @@ def query_history(origin: str | None = None, url: str | None = None,
         body["url"] = url
 
     resp = _post(CRUX_HISTORY_URL, body)
-    out = _flatten_history(resp, origin or url, form_factor)
+    out = _flatten_history(resp, origin or url, form_factor, diagnostics=diagnostics)
     if use_cache:
         cache_set(out, *cache_args)
     return out
@@ -157,7 +157,7 @@ def _p75(value):
     return number if math.isfinite(number) else None
 
 
-def _flatten_record(resp, target, form_factor):
+def _flatten_record(resp, target, form_factor, diagnostics=False):
     if resp.get("_status") == "no_data":
         return {"target": target, "form_factor": form_factor, "status": "no_data"}
     rec = resp.get("record") or {}
@@ -170,10 +170,13 @@ def _flatten_record(resp, target, form_factor):
             continue
         pct = m.get("percentiles") or {}
         flat[friendly] = _p75(pct.get("p75"))
+    if diagnostics:
+        flat["diagnostics"] = {"metrics": _clean_missing(metrics),
+                               "interpretation": "Distributions and diagnostic metrics; no additional CWV verdicts."}
     return flat
 
 
-def _flatten_history(resp, target, form_factor):
+def _flatten_history(resp, target, form_factor, diagnostics=False):
     if resp.get("_status") == "no_data":
         return {"target": target, "form_factor": form_factor, "status": "no_data"}
     rec = resp.get("record") or {}
@@ -187,7 +190,22 @@ def _flatten_history(resp, target, form_factor):
             continue
         timeseries = (m.get("percentilesTimeseries") or {}).get("p75s") or []
         flat["history"][friendly] = [_p75(v) for v in timeseries]
+    if diagnostics:
+        flat["diagnostics"] = {"metrics": _clean_missing(metrics),
+                               "interpretation": "Distributions and diagnostic metrics; no additional CWV verdicts."}
     return flat
+
+
+def _clean_missing(value):
+    if isinstance(value, dict):
+        return {k: _clean_missing(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_clean_missing(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, str) and value.lower() in ("nan", "infinity", "-infinity"):
+        return None
+    return value
 
 
 def main():
@@ -197,6 +215,7 @@ def main():
     parser.add_argument("--form-factor", default="ALL_FORM_FACTORS", choices=FORM_FACTORS)
     parser.add_argument("--history", action="store_true", help="Pull weekly history instead of snapshot")
     parser.add_argument("--periods", type=int, default=25, help="History period count (1-40, default 25)")
+    parser.add_argument("--diagnostics", action="store_true", help="Include all available metric distributions and subparts")
     parser.add_argument("--no-cache", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
@@ -205,10 +224,10 @@ def main():
         if args.history:
             out = query_history(origin=args.origin, url=args.url, form_factor=args.form_factor,
                                 collection_period_count=args.periods,
-                                use_cache=not args.no_cache)
+                                use_cache=not args.no_cache, diagnostics=args.diagnostics)
         else:
             out = query_record(origin=args.origin, url=args.url, form_factor=args.form_factor,
-                               use_cache=not args.no_cache)
+                               use_cache=not args.no_cache, diagnostics=args.diagnostics)
     except Exception as e:
         print(json.dumps({"error": str(e), "type": type(e).__name__}), file=sys.stderr)
         return 1

@@ -100,3 +100,33 @@ def test_no_data_is_cached_and_no_cache_bypasses_it(monkeypatch):
     assert fetch.call_count == 1
     gsc_crux.query_record(origin="https://example.com", use_cache=False)
     assert fetch.call_count == 2
+
+@pytest.mark.parametrize("history", [False, True])
+def test_diagnostics_preserve_distributions_and_missing_periods(monkeypatch, history):
+    metrics = {
+        "largest_contentful_paint": {"histogram": [{"start": 0, "end": 2500, "density": .8}]},
+        "round_trip_time": {"percentilesTimeseries": {"p75s": [150, "NaN"]}},
+        "largest_contentful_paint_resource_type": {"fractions": {"image": .7, "text": .3}},
+        "largest_contentful_paint_image_resource_load_delay": {"percentiles": {"p75": 150}},
+    }
+    post = MagicMock(return_value={"record": {"metrics": metrics}})
+    monkeypatch.setattr(gsc_crux, "_post", post)
+    method = gsc_crux.query_history if history else gsc_crux.query_record
+    assert "diagnostics" not in method(origin="https://example.com")
+    out = method(origin="https://example.com", diagnostics=True)
+    assert post.call_count == 2
+    detail = out["diagnostics"]["metrics"]
+    assert detail["largest_contentful_paint_resource_type"]["fractions"]["image"] == .7
+    assert detail["round_trip_time"]["percentilesTimeseries"]["p75s"] == [150, None]
+    assert "histogram" in detail["largest_contentful_paint"]
+    json.dumps(out, allow_nan=False)
+    assert method(origin="https://example.com", diagnostics=True) == out
+    assert post.call_count == 2
+
+
+def test_crux_cli_exposes_diagnostics(monkeypatch, capsys):
+    query = MagicMock(return_value={})
+    monkeypatch.setattr(gsc_crux, "query_record", query)
+    monkeypatch.setattr("sys.argv", ["gsc_crux", "--origin", "https://example.com", "--diagnostics"])
+    assert gsc_crux.main() == 0
+    assert query.call_args.kwargs["diagnostics"] is True

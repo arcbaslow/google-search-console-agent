@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expose optional CrUX distributions, LCP subparts and other available metrics with --diagnostics for snapshots and history.
+
 - Migrate Open PageRank to its current POST API using newly issued keys, preserving host scores and quota headers without transferring legacy environment keys.
 
 - Add explicit PT date ranges, hourly Search Analytics with partial-data metadata, and equal-period aggregate comparisons.

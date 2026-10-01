@@ -412,3 +412,13 @@ domains have null scores; the old integer score remains null. Host results are
 matched exactly, with the documented `www` alias. Quota errors retain retry
 hints without automatic retries. Scores remain proprietary service output,
 not a vendored backlink index. Live authentication has not been tested.
+
+## CrUX diagnostic detail
+
+`gsc_crux.py --diagnostics` preserves all returned metric objects under
+`diagnostics.metrics`, for snapshots and history. This includes available
+histograms, fractions, LCP image subparts/resource types and round-trip time.
+It uses the same single API request; absent metrics stay absent and missing
+values become null. History distributions remain aligned to collection
+periods. These diagnostics do not add Core Web Vitals or pass/fail thresholds.
+Default compact output is unchanged.
