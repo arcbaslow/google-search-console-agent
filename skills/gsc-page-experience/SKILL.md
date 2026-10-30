@@ -12,14 +12,14 @@ metadata:
 
 # GSC: Page Experience
 
-Three free signals — none needing an API key.
+Three free signals - none needing an API key.
 
-- **Local header probe** — single HTTPS HEAD against the homepage.
+- **Local header probe** - single HTTPS HEAD against the homepage.
   Grades presence of HSTS, CSP, X-Content-Type-Options, X-Frame-
   Options, Referrer-Policy, Permissions-Policy. Fast.
-- **Mozilla HTTP Observatory** — broader header / cookie / CSP rule
+- **Mozilla HTTP Observatory** - broader header / cookie / CSP rule
   set, returns a letter grade. One synchronous POST returns a completed or cached scan.
-- **SSL Labs** — full TLS audit: protocol versions, cipher suites,
+- **SSL Labs** - full TLS audit: protocol versions, cipher suites,
   certificate chain, known-vulnerability checks. Asynchronous: polls
   up to ~120 s. Uses cached results when available.
 
@@ -56,10 +56,10 @@ Three free signals — none needing an API key.
 
 ## When to call
 
-- Before a launch — check the site's security posture. Header grades do
+- Before a launch - check the site's security posture. Header grades do
   not demonstrate a ranking improvement.
-- After a migration — TLS configs drift on platform changes.
-- After a CDN swap — header policies often reset to provider defaults.
+- After a migration - TLS configs drift on platform changes.
+- After a CDN swap - header policies often reset to provider defaults.
 
 ## Caveats
 

@@ -41,19 +41,19 @@ For each registered sitemap, report:
 
 Findings:
 
-- **No sitemaps registered**: High — submit at least one so Google has a
+- **No sitemaps registered**: High - submit at least one so Google has a
   discovery signal.
-- **Any sitemap with errors > 0**: High — open it in Search Console UI to
+- **Any sitemap with errors > 0**: High - open it in Search Console UI to
   see which URLs failed.
-- **Warnings > 0**: Medium — usually duplicates or non-indexable, worth
+- **Warnings > 0**: Medium - usually duplicates or non-indexable, worth
   a review but not urgent.
-- **`lastSubmitted` > 90 days on a dynamic site**: Medium — resubmit so
+- **`lastSubmitted` > 90 days on a dynamic site**: Medium - resubmit so
   Google re-crawls.
 
 ### Homepage probe
 
 Surface the inferred framework / platform / server header in the
-overview block. Other agents use this — `gsc-page-experience` needs
+overview block. Other agents use this - `gsc-page-experience` needs
 the host, `gsc-structured-data` benefits from knowing whether the
 site is SPA-rendered (where client-only JSON-LD won't show up in the
 HTML parse).

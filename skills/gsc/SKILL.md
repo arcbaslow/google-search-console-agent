@@ -21,7 +21,7 @@ property like `sc-domain:example.com`, or a URL prefix like
 
 A toolkit for everything you would normally pull from Search Console
 plus the two adjacent APIs (PageSpeed Insights and Chrome UX Report).
-All data flows through Google's own ADC auth — no user-registered
+All data flows through Google's own ADC auth - no user-registered
 OAuth client and no service account required.
 
 ## Quick Reference
@@ -102,7 +102,7 @@ Before any analysis command, verify auth:
 python scripts/gsc_auth.py --check
 ```
 
-If auth fails, prefer Google's own ADC path — install gcloud and run:
+If auth fails, prefer Google's own ADC path - install gcloud and run:
 
 ```
 python scripts/gsc_auth.py --adc          # prints the gcloud command
@@ -153,7 +153,7 @@ Override the window via `--days N` on any command.
 - Average organic CTR by SERP position (positions 1-20)
 
 Findings that include a `metric` / `metric_value` pair are auto-enriched
-with verdicts by the markdown reporter — `good`, `needs_improvement`,
+with verdicts by the markdown reporter - `good`, `needs_improvement`,
 or `poor` for CWV; `on_curve`, `above_curve`, `below_curve`, or
 `below_curve_critical` for CTR.
 

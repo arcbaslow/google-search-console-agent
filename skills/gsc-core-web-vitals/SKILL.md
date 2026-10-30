@@ -52,7 +52,7 @@ available only for a subset of high-traffic pages.
 ## Limits
 
 - CrUX needs a meaningful volume of Chrome traffic. Small or new
-  origins return `no_data` — the skill reports that gracefully.
+  origins return `no_data` - the skill reports that gracefully.
 - Snapshot is a rolling 28-day window; history defaults to 25 periods (up to 40) at weekly
   resolution.
 - Per-URL data is only available for URLs with enough sampled visits.

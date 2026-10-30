@@ -65,13 +65,13 @@ attaches the CWV verdict automatically:
 | **LCP** | Preload hero image, serve next-gen formats (AVIF/WebP), trim above-the-fold render-blocking JS, use `fetchpriority="high"` on the LCP image, fix slow TTFB upstream |
 | **INP** | Break up long JS tasks, defer non-critical handlers, avoid main-thread synchronous work on interaction, use `requestIdleCallback` |
 | **CLS** | Reserve image / iframe sizes (width+height or aspect-ratio), avoid late-injected banner ads / cookie notices without size reservations, preload web fonts |
-| **FCP** | Same as LCP — serve HTML quickly, minimize blocking resources |
+| **FCP** | Same as LCP - serve HTML quickly, minimize blocking resources |
 | **TTFB** | Server response time; usually CDN config, cache rules, origin compute speed |
 
 ## Caveats
 
 - CrUX needs enough Chrome traffic. Small or new origins return
-  `no_data` — surface that as Low (not a real problem).
+  `no_data` - surface that as Low (not a real problem).
 - INP replaced FID in March 2024. Older monitoring may still report FID;
   this agent ignores FID entirely.
 - URL-level data is available for high-traffic pages only. For low-

@@ -12,10 +12,10 @@ Please do not file public issues for security problems.
 - Credential handling in `scripts/gsc_auth.py` and any path that touches
   `~/.claude/gsc-credentials.json` or gcloud ADC files
 - PII handling in `scripts/gsc_utils.py` (the `scrub_pii` denylist +
-  regex pass) — relevant because search-query data can contain
+  regex pass) - relevant because search-query data can contain
   user-entered PII
 - Any code path that sends user data to a third-party endpoint
-  (Mozilla Observatory, SSL Labs, Open PageRank, Tranco — all
+  (Mozilla Observatory, SSL Labs, Open PageRank, Tranco - all
   documented in their respective adapters)
 - Any command that performs a write (sitemap submit/delete, site
   add/delete) without an explicit confirmation prompt
@@ -26,7 +26,7 @@ Please do not file public issues for security problems.
 
 - Misuse of the toolkit against a property you do not own
 - Bugs in the upstream Google / Mozilla / SSL Labs / Open PageRank
-  APIs themselves — report those to the respective vendors
+  APIs themselves - report those to the respective vendors
 - Issues that require an attacker with shell access to the user's
   machine (they already own `~/.claude/`)
 
@@ -39,7 +39,7 @@ Please do not file public issues for security problems.
 - Service account / external account:
   `GOOGLE_APPLICATION_CREDENTIALS` env var
 - Open PageRank API key:
-  `OPENPAGERANK_V1_API_KEY` env var or explicit `--api-key` — never persisted on disk
+  `OPENPAGERANK_V1_API_KEY` env var or explicit `--api-key` - never persisted on disk
 
 Google credentials are used by the Google adapters. The optional Open
 PageRank key is intentionally sent to its configured API endpoint; it is

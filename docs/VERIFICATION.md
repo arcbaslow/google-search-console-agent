@@ -1,4 +1,4 @@
-# Release verification — v0.2.2
+# Release verification - v0.2.2
 
 Date: 2026-09-08. Local environment: Windows, Python 3.12.14; Node.js 24 for GTM Diff.
 
@@ -24,7 +24,7 @@ The test results above are a dated local run, not a claim that every test was ru
 
 Source distribution and wheel built successfully; `twine check` passed. The offline report/extraction example also passed after loading the module from the extracted wheel, outside the repository.
 
-## Roadmap work verification — 2026-09-30
+## Roadmap work verification - 2026-09-30
 
 Branch: `roadmap-work`, created from clean `master` at `5251dd6`. Package
 version remains 0.2.2. No remote push, PR, tag or release was made.
@@ -104,7 +104,7 @@ storage/export, learned CTR references and GA4 integration remain Later.
 Uncertain PSI units/authentication and ambiguous audit policies were left
 unchanged. No bulk inspection or new write surface was added.
 
-## Cache roadmap follow-up — 2026-09-30
+## Cache roadmap follow-up - 2026-09-30
 
 Continued on `roadmap-work` from clean `8d6e0b3`, at the owner's request to
 start remaining roadmap tasks. Selected confirmed cache defects before new
@@ -144,7 +144,7 @@ cache; in-flight reads across independent processes can still race with
 invalidation. These limits are recorded in ROADMAP.md rather than presented
 as solved by atomic file replacement.
 
-## Remaining roadmap pass — 2026-10-01
+## Remaining roadmap pass - 2026-10-01
 
 Started on clean `master` at `051b59a` and switched to the existing
 `roadmap-work` branch at that same commit. The earlier branch was already

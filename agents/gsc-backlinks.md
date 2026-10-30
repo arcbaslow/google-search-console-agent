@@ -20,7 +20,7 @@ python scripts/gsc_backlinks.py --compare <site>,<competitor1>,<competitor2> --j
 ```
 
 If Open PageRank reports `no_api_key`, surface the setup hint
-(`OPENPAGERANK_V1_API_KEY`) but continue with Tranco-only output — it's
+(`OPENPAGERANK_V1_API_KEY`) but continue with Tranco-only output - it's
 still useful.
 
 ## What to surface

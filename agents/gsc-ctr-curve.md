@@ -1,6 +1,6 @@
 ---
 name: gsc-ctr-curve
-description: GSC click-through-rate auditor. Compares per-query observed CTR to the position-CTR curve and flags queries that rank well but under-click — a candidate for intent and SERP review.
+description: GSC click-through-rate auditor. Compares per-query observed CTR to the position-CTR curve and flags queries that rank well but under-click - a candidate for intent and SERP review.
 model: sonnet
 maxTurns: 15
 tools: Read, Bash, Write
@@ -33,8 +33,8 @@ The benchmark returns:
 |---------|--------|
 | `above_curve` | Check SERP and cohort context |
 | `on_curve` | No action |
-| `below_curve` | Medium finding — title / meta rewrite candidate |
-| `below_curve_critical` | High finding — review intent and SERP context |
+| `below_curve` | Medium finding - title / meta rewrite candidate |
+| `below_curve_critical` | High finding - review intent and SERP context |
 | `low_volume` | Skip |
 
 ### Prioritization
@@ -63,6 +63,6 @@ composite provenance; always disclose `benchmark_basis`.
 - AI overviews, featured snippets, image packs, and site links all
   distort the curve. If position 1 underperforms, check the SERP
   before assuming the title is the cause.
-- Some queries are brand-defending — high impressions, modest clicks
+- Some queries are brand-defending - high impressions, modest clicks
   because users are clicking ads above the SERP. Brand queries should
   generally be excluded from the rewrite shortlist.

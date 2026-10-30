@@ -35,7 +35,7 @@ Optional `--search-type` (`web` / `image` / `video` / `news` / `discover`
 - Surface the 10 queries with the highest impressions
 - Surface the 10 queries with the highest clicks
 - Flag any query whose impressions are growing fast (more than 2x of
-  the median in the window) — those are emerging-intent opportunities
+  the median in the window) - those are emerging-intent opportunities
 
 ### Top pages
 
@@ -48,7 +48,7 @@ Optional `--search-type` (`web` / `image` / `video` / `news` / `discover`
 - Report the mobile / desktop / tablet split of clicks and impressions
 - A mismatch between impressions share and clicks share (e.g. mobile
   is 70% of impressions but only 40% of clicks) suggests a mobile UX
-  or speed issue — escalate to `gsc-core-web-vitals` for the CWV check
+  or speed issue - escalate to `gsc-core-web-vitals` for the CWV check
 
 ### Countries
 

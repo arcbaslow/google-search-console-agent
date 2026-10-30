@@ -11,7 +11,7 @@ exposes `/gsc <command>` and routes to:
 
 - `gsc-sitemaps` is the only skill with write surfaces (sitemap CRUD, site CRUD).
 
-The `gsc-audit` skill calls `scripts/gsc_audit.py` directly — it's a
+The `gsc-audit` skill calls `scripts/gsc_audit.py` directly - it's a
 deterministic mechanical orchestrator. For richer LLM-driven analysis
 on any single dimension, spawn the matching specialist subagent
 defined under `agents/`.

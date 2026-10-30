@@ -32,7 +32,7 @@ metadata:
 - **CTR-vs-position curve**: queries with weak CTR for their average rank (a hypothesis to investigate, not proof of a title defect)
 - **Sitemap health**: error and warning counts per registered sitemap
 - **Core Web Vitals**: CrUX origin snapshot for LCP / INP / CLS / FCP / TTFB classified against Google's official good / needs-improvement / poor bands; optional 25-week history
-- **URL inspection**: stubbed in the audit driver because it is quota-heavy. Run `/gsc inspect <site> <url>` for a deep dive.
+- **URL inspection**: stubbed in the audit driver because it is quota-heavy. Run `/gsc inspect <site> <url>` for a detailed check.
 
 ## Default Parameters
 
@@ -45,14 +45,14 @@ metadata:
 
 Plain markdown, no emoji. Sections:
 
-1. **Header** — site, generation timestamp, confidence label
-2. **Site Context** — permission level, sitemap inventory, homepage probe, inferred framework / platform
-3. **Executive Summary** — one bullet per agent
-4. **Action Plan** — findings grouped by severity (Critical / High / Medium / Low). Each finding shows source agent and any CWV benchmark verdict, e.g.
+1. **Header** - site, generation timestamp, confidence label
+2. **Site Context** - permission level, sitemap inventory, homepage probe, inferred framework / platform
+3. **Executive Summary** - one bullet per agent
+4. **Action Plan** - findings grouped by severity (Critical / High / Medium / Low). Each finding shows source agent and any CWV benchmark verdict, e.g.
 
    > **lcp_p75_ms above the poor threshold** _(source: gsc-core-web-vitals)_ (value 4350, good ≤ 2500, needs improvement ≤ 4000, verdict poor)
 
-5. **Per-Agent Output** — each agent's summary + raw JSON in a collapsed `<details>` block
+5. **Per-Agent Output** - each agent's summary + raw JSON in a collapsed `<details>` block
 
 ## Confidence Inheritance
 
@@ -68,7 +68,7 @@ Search subrequest failures appear in `data.source_errors`.
 |----------|--------|
 | Auth fails | Report and surface the gcloud command via `gsc_auth.py --adc` |
 | Property not in user's GSC list | Continue with a Critical finding; ask for the right property before interpreting private data |
-| CrUX returns no_data | Note "insufficient Chrome traffic at this origin" — common for small or new sites |
+| CrUX returns no_data | Note "insufficient Chrome traffic at this origin" - common for small or new sites |
 | Sitemap fetch fails | Continue; flag the missing inventory as Medium |
 | 4xx on the homepage probe | Continue; framework / platform fields stay null |
 

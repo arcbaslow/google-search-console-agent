@@ -106,10 +106,10 @@ def test_run_search_analytics_flags_traffic_drop(monkeypatch):
 def test_run_ctr_curve_flags_below_curve(monkeypatch):
     monkeypatch.setattr(gsc_audit.gsc_data, "top_queries", lambda *a, **kw: {
         "rows": [
-            # Position 1, 30% CTR — expected ~40%, below curve
+            # Position 1, 30% CTR - expected ~40%, below curve
             {"query": "acme reviews", "clicks": 300, "impressions": 1000,
              "ctr": 0.30, "position": 1.0},
-            # Position 5, 5.3% CTR — on curve
+            # Position 5, 5.3% CTR - on curve
             {"query": "acme login", "clicks": 53, "impressions": 1000,
              "ctr": 0.053, "position": 5.0},
         ],
