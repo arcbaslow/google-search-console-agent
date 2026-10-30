@@ -15,7 +15,7 @@ metadata:
 PSI runs Lighthouse against a URL in real time and returns:
 
 - **Lighthouse category scores** (0-1): performance, SEO, accessibility, best-practices
-- **Lab metrics**: LCP, CLS, TBT, FCP, Speed Index — measured under PSI's emulated conditions
+- **Lab metrics**: LCP, CLS, TBT, FCP, Speed Index - measured under PSI's emulated conditions
 - **Field metrics**: same CWV as CrUX, if there's enough data for the URL
 - **The full PSI response** (under `raw` only with `--raw`; Lighthouse is at `raw.lighthouseResult`) with every individual audit, opportunity, and diagnostic
 
@@ -48,7 +48,7 @@ see the authentication review in docs/ROADMAP.md.
 
 ## Caveats
 
-- Lab vs field: PSI lab is emulated on Moto G Power at slow 4G —
+- Lab vs field: PSI lab is emulated on Moto G Power at slow 4G -
   conservative compared with most real users on broadband. Field data
   in the same response (when present) is the better representation.
 - Speed Index and TBT are lab-only metrics; they are useful as

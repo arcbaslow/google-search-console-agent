@@ -15,7 +15,7 @@ python scripts/gsc_psi.py --url <url> --strategy mobile --raw --json
 python scripts/gsc_psi.py --url <url> --strategy desktop --raw --json
 ```
 
-Always run **mobile first** — Google's index is mobile-first, and most
+Always run **mobile first** - Google's index is mobile-first, and most
 real users are on mobile. Run desktop only if the user explicitly asks.
 
 ## What's returned
@@ -23,9 +23,9 @@ real users are on mobile. Run desktop only if the user explicitly asks.
 The script returns:
 
 - `lh_performance_score`, `lh_seo_score`, `lh_accessibility_score`, `lh_best_practices_score` (0-1)
-- `lab` — LCP, CLS, TBT, FCP, Speed Index (synthetic, conservative)
-- `field` — same CWV as CrUX if available for this URL
-- `raw` — the full PSI response, only with `--raw`; read audits at `raw.lighthouseResult.audits` (summarise, do not echo the whole payload)
+- `lab` - LCP, CLS, TBT, FCP, Speed Index (synthetic, conservative)
+- `field` - same CWV as CrUX if available for this URL
+- `raw` - the full PSI response, only with `--raw`; read audits at `raw.lighthouseResult.audits` (summarise, do not echo the whole payload)
 
 ## Lighthouse score bands
 
@@ -70,7 +70,7 @@ instead.
 ## Caveats
 
 - Each PSI call is a real Lighthouse run; expect 15-45 s per URL.
-- PSI lab is emulated on Moto G Power, slow 4G — conservative for
+- PSI lab is emulated on Moto G Power, slow 4G - conservative for
   modern hardware. The field metrics in the same response are the
   source of truth for real-user experience.
 - Speed Index and TBT are lab-only. Useful as pre-deploy regression

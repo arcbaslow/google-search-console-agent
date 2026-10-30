@@ -1,6 +1,6 @@
 ---
 name: gsc-url-inspect
-description: "Per-URL inspection via GSC's URL Inspection API. Indexing state, last crawl, rich results coverage, page fetch state, canonical resolution. Quota-heavy — one URL per call. Use when user says 'is this URL indexed', 'why isn't this page indexed', 'rich results status'."
+description: "Per-URL inspection via GSC's URL Inspection API. Indexing state, last crawl, rich results coverage, page fetch state, canonical resolution. Quota-heavy - one URL per call. Use when user says 'is this URL indexed', 'why isn't this page indexed', 'rich results status'."
 user-invokable: true
 argument-hint: "<site> <url> [--lang en-US]"
 license: MIT
@@ -15,12 +15,12 @@ metadata:
 `urlInspection.index.inspect` returns Google's indexed-version analysis.
 It does not perform the UI's live-URL test. The response includes:
 
-- **Coverage** — `coverageState` text and separate indexing/fetch/robots states
-- **Crawl** — last crawl time, page fetch state, robots.txt state
-- **Indexability** — verdict (`PASS`, `FAIL`, `NEUTRAL`)
-- **Canonical** — user-declared vs Google-selected canonical
-- **Rich results** — result-level verdict, detected types and item issues
-- **AMP** — declared and indexed AMP URL state (legacy)
+- **Coverage** - `coverageState` text and separate indexing/fetch/robots states
+- **Crawl** - last crawl time, page fetch state, robots.txt state
+- **Indexability** - verdict (`PASS`, `FAIL`, `NEUTRAL`)
+- **Canonical** - user-declared vs Google-selected canonical
+- **Rich results** - result-level verdict, detected types and item issues
+- **AMP** - declared and indexed AMP URL state (legacy)
 
 ## Direct command
 
@@ -34,7 +34,7 @@ prefix or domain).
 
 ## Quota note
 
-URL Inspection counts heavily against the GSC API quota — 2,000
+URL Inspection counts heavily against the GSC API quota - 2,000
 inspections per day, 600 per minute per property. The audit driver
 deliberately omits URL inspection. Use this skill for targeted
 diagnostics, not bulk scans.

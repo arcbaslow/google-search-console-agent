@@ -58,7 +58,7 @@ def test_validate_block_product_full_pass():
         "aggregateRating": {"@type": "AggregateRating"}, "review": [],
     }
     # `review` empty list still counts as present? Let's check our _has_field
-    # — empty list returns False, so review is missing. That's fine, recommended.
+    # - empty list returns False, so review is missing. That's fine, recommended.
     out = gsc_structured_data.validate_block(block)
     # Required all present; recommended `review` missing because empty list.
     assert out["verdict"] == "unchecked"

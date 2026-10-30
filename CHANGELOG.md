@@ -99,16 +99,16 @@
 
 ## 0.2.0
 
-- Add `gsc_backlinks.py` — domain-authority adapter combining Open
+- Add `gsc_backlinks.py` - domain-authority adapter combining Open
   PageRank (optional free API key) and Tranco top-1M (no key,
   weekly-refreshed local cache). Surfaces how authoritative a domain
   is vs competitors. Common Crawl noted as a future direction for the
   literal link graph.
-- Add `gsc_page_experience.py` — Mozilla HTTP Observatory + SSL Labs +
+- Add `gsc_page_experience.py` - Mozilla HTTP Observatory + SSL Labs +
   a local security-headers probe. Grades HSTS, CSP, Referrer-Policy,
   Permissions-Policy, X-Content-Type, X-Frame-Options, plus full TLS
   configuration. All sources free, no API keys.
-- Add `gsc_structured_data.py` — local JSON-LD parser and Schema.org
+- Add `gsc_structured_data.py` - local JSON-LD parser and Schema.org
   required-field validator. Site-wide rich-results audit (sitemap
   sample mode) and per-URL deep dive. Complements `gsc-url-inspect`
   which is quota-heavy and one URL at a time.

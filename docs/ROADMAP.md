@@ -10,7 +10,7 @@ documentation, and unverified live behavior. Baseline file/line references
 refer to `5251dd6`, so they remain useful after fixes move the code.
 Effort is approximate developer time including tests and documentation.
 
-## Current disposition — 2026-10-01
+## Current disposition - 2026-10-01
 
 Continued from `051b59a` on `roadmap-work` at the owner's request to cover the
 remaining roadmap. All Now work remains complete. The bounded Next changes
@@ -193,7 +193,7 @@ header-failure findings introduced by the combined-source error reporting.
   of ranking loss: [Google's page-experience guidance][page-experience] and
   the limited local parser do not support that conclusion.
 
-## Upstream review — initial 2026-09-30 evidence
+## Upstream review - initial 2026-09-30 evidence
 
 Current implementation and the 2026-10-01 OPR migration clarification are
 recorded above. This section preserves the initial comparison.
@@ -375,7 +375,7 @@ Tranco inputs. Published terms were reviewed, but permission for any particular
 commercial deployment was not established. External scans and authenticated
 queries were not exercised, and credentials were not accessed.
 
-## Follow-up implementation — cache work
+## Follow-up implementation - cache work
 
 The owner's follow-up authorizes continued roadmap work on `roadmap-work`.
 Start with the confirmed cache bugs before additional features; the starting

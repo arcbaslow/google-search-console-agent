@@ -42,13 +42,13 @@ Site commands use `--site X --add-site` or `--site X --delete-site`.
 - **Errors > 0** → High. Open the sitemap in the Search Console UI
   for the failing URLs.
 - **Warnings > 0** → Medium. Usually duplicates or non-indexable
-  entries — worth a review but rarely urgent.
+  entries - worth a review but rarely urgent.
 - **`lastSubmitted` older than 90 days for a dynamic site** → Medium.
   Resubmit so Google re-crawls.
 
 ## Caveats
 
-The submit endpoint only takes the sitemap URL — it does not push
+The submit endpoint only takes the sitemap URL - it does not push
 sitemap content. Make sure your CDN actually serves a 200 response
 for the sitemap URL before submitting; the API does not validate it
 for you.

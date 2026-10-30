@@ -28,7 +28,7 @@ python scripts/gsc_page_experience.py --host <host> --ssl --json
 
 | Grade | Severity |
 |-------|----------|
-| A+ / A / A- | none — note the protocol versions and certificate freshness |
+| A+ / A / A- | none - note the protocol versions and certificate freshness |
 | B / C | Medium |
 | D / E / F / T / M | High to Critical |
 
@@ -55,7 +55,7 @@ finding detail. Common missing items:
 ### Local probe coverage
 
 The local probe gives a quick %-coverage of six security headers. Use
-it as a sanity check against Observatory's grade — they usually agree.
+it as a sanity check against Observatory's grade - they usually agree.
 
 ## Output format
 

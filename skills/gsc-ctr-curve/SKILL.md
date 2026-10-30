@@ -1,6 +1,6 @@
 ---
 name: gsc-ctr-curve
-description: "Compare per-query observed CTR to the position-based CTR curve. Surfaces queries with weak click-through for their average rank — a candidate for intent and SERP review. Triggers: 'low ctr', 'why is ctr low', 'title tag', 'meta description optimization'."
+description: "Compare per-query observed CTR to the position-based CTR curve. Surfaces queries with weak click-through for their average rank - a candidate for intent and SERP review. Triggers: 'low ctr', 'why is ctr low', 'title tag', 'meta description optimization'."
 user-invokable: true
 argument-hint: "<site> [--days N] [--max-queries N]"
 license: MIT
@@ -45,9 +45,9 @@ Run it standalone when you want only the CTR diagnosis.
 |---------|---------|
 | `above_curve` | Observed CTR ≥ 120% of the heuristic |
 | `on_curve` | Observed CTR > 85% and < 120% of the heuristic |
-| `below_curve` | Observed CTR > 65% and ≤ 85% of the heuristic — review candidate |
-| `below_curve_critical` | Observed CTR ≤ 65% of the heuristic — review candidate |
-| `low_volume` | Below 50 impressions — small-sample noise; skipped from action plan |
+| `below_curve` | Observed CTR > 65% and ≤ 85% of the heuristic - review candidate |
+| `below_curve_critical` | Observed CTR ≤ 65% of the heuristic - review candidate |
+| `low_volume` | Below 50 impressions - small-sample noise; skipped from action plan |
 
 ## Caveats
 

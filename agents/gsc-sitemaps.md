@@ -17,12 +17,12 @@ python scripts/gsc_admin.py --site <site> --feedpath <url> --get-sitemap --json
 
 The list response includes per-sitemap:
 
-- `path` — the sitemap URL
-- `lastSubmitted` — ISO timestamp of last submission
-- `isPending` — true while Google is processing the submission
-- `lastDownloaded` — ISO timestamp of last Google fetch
-- `contents` — counts by type (`web`, `image`, `video`, `news`)
-- `errors`, `warnings` — counts to flag
+- `path` - the sitemap URL
+- `lastSubmitted` - ISO timestamp of last submission
+- `isPending` - true while Google is processing the submission
+- `lastDownloaded` - ISO timestamp of last Google fetch
+- `contents` - counts by type (`web`, `image`, `video`, `news`)
+- `errors`, `warnings` - counts to flag
 
 ## What to flag
 

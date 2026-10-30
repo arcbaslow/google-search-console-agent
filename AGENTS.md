@@ -94,7 +94,7 @@ sparingly; do not bulk-iterate.
 
 | Command | Purpose |
 |---------|---------|
-| `python scripts/gsc_backlinks.py --domain example.com --json` | Single domain — Tranco rank + Open PageRank (needs `OPENPAGERANK_V1_API_KEY`) |
+| `python scripts/gsc_backlinks.py --domain example.com --json` | Single domain - Tranco rank + Open PageRank (needs `OPENPAGERANK_V1_API_KEY`) |
 | `python scripts/gsc_backlinks.py --compare site.com,comp1.com,comp2.com --json` | Competitor comparison |
 | `python scripts/gsc_backlinks.py --tranco example.com --json` | Tranco-only lookup (no key) |
 
@@ -104,7 +104,7 @@ Open PageRank requires a newly issued key in `OPENPAGERANK_V1_API_KEY`; legacy k
 
 | Command | Purpose |
 |---------|---------|
-| `python scripts/gsc_page_experience.py --host example.com --json` | Everything — Observatory + SSL Labs + local headers |
+| `python scripts/gsc_page_experience.py --host example.com --json` | Everything - Observatory + SSL Labs + local headers |
 | `python scripts/gsc_page_experience.py --host example.com --headers --json` | Local-only fast probe |
 | `python scripts/gsc_page_experience.py --host example.com --observatory --json` | Mozilla Observatory only |
 | `python scripts/gsc_page_experience.py --host example.com --ssl --json` | SSL Labs only |
@@ -115,7 +115,7 @@ No API keys are used for these probes. SSL Labs polls within a 120-second schedu
 
 | Command | Purpose |
 |---------|---------|
-| `python scripts/gsc_structured_data.py --url https://X/foo --json` | Single-URL deep dive |
+| `python scripts/gsc_structured_data.py --url https://X/foo --json` | Single-URL check |
 | `python scripts/gsc_structured_data.py --site example.com --sample 25 --json` | Sitemap-wide audit (25 URLs sampled) |
 
 Fetches remote HTML and parses JSON-LD locally. Returns `pass`, `partial`, `fail`, `untyped`, `invalid`, `unchecked` or `unsupported`, plus missing-field and fetch-coverage rollups. These are limited field checks, not rich-result eligibility decisions.

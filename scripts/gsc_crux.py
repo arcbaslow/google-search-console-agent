@@ -68,7 +68,7 @@ def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
     except urllib.error.HTTPError as e:
         body_text = e.read().decode("utf-8", errors="replace")
         if e.code == 404:
-            # CrUX returns 404 when the URL has insufficient data — that's not
+            # CrUX returns 404 when the URL has insufficient data - that's not
             # an error in the usual sense, just "no data".
             return {"_status": "no_data", "_http_code": 404, "_message": body_text[:300]}
         raise ApiReadError(http_error_details("CrUX", e.code, body_text, e.headers)) from None

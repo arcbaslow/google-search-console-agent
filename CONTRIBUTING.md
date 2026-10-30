@@ -51,14 +51,14 @@ PR refs `(#NNN)` only when one exists.
 - Vendoring proprietary data (Ahrefs, Semrush, Moz beyond their free tiers)
 - Adding paid SaaS dependencies
 - Removing the multi-runtime instruction files (CLAUDE / AGENTS / GEMINI)
-- Big rewrites without a discussion first — open an issue describing the
+- Big rewrites without a discussion first - open an issue describing the
   shape before the work
 
 ## Local-only files
 
-- `.secrets/` — your real credentials. Already gitignored.
-- `~/.claude/gsc-credentials.json` — legacy OAuth token.
-- `~/.config/gcloud/application_default_credentials.json` — gcloud ADC token.
+- `.secrets/` - your real credentials. Already gitignored.
+- `~/.claude/gsc-credentials.json` - legacy OAuth token.
+- `~/.config/gcloud/application_default_credentials.json` - gcloud ADC token.
 
 If you accidentally stage any of these, `git restore --staged <file>`
 before committing.

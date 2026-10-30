@@ -35,7 +35,7 @@ from an exclusion alone. The API reports the indexed version, not a live test.
 ### Canonical
 
 - Compare `userCanonical` to `googleCanonical`. If they differ, the page
-  is being deduplicated to a different URL — flag it.
+  is being deduplicated to a different URL - flag it.
 
 ### Rich results
 

@@ -17,12 +17,12 @@ the hole with two free sources that, combined, answer the question
 audits keep asking: "how authoritative is this site vs the competitors
 we care about?"
 
-- **Open PageRank** — current POST bulk API, at most 100 entries/request.
+- **Open PageRank** - current POST bulk API, at most 100 entries/request.
   Set `OPENPAGERANK_V1_API_KEY` to a new `opr_live_` key. Old DomCop keys
   are retired; see the migration instructions below. Quota headers and
   host/domain score scope are retained.
 
-- **Tranco top-1M** — no key, no signup. Downloaded once and cached
+- **Tranco top-1M** - no key, no signup. Downloaded once and cached
   locally; refreshed weekly. Tells you whether the domain is in the
   global top 1k / 10k / 100k / 1M, which is a coarse but honest
   popularity signal.
@@ -38,7 +38,7 @@ we care about?"
 ## When to call
 
 - Quarterly competitor benchmarking
-- Outreach prioritisation — focus link-building energy on sites whose
+- Outreach prioritisation - focus link-building energy on sites whose
   authority is similar to or higher than yours
 - Before launching a campaign, snapshot the rank so you can measure
   movement six months later
@@ -52,7 +52,7 @@ export OPENPAGERANK_V1_API_KEY="opr_live_xxxxxxxxxxxxxxxxxxxx"
 python scripts/gsc_backlinks.py --domain example.com --json
 ```
 
-Tranco works without any key — first run downloads the top-1M CSV
+Tranco works without any key - first run downloads the top-1M CSV
 once, then lookups use the local cache. Download failures are reported separately.
 
 ## Caveats
