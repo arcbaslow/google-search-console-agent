@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Search Console Agent - Search performance, indexing and page experience." width="100%">
+  <img src="assets/hero.jpg" alt="Search Console Agent: a lighthouse sweeps its beam over hills made of web pages while a robot surveys with a theodolite, another times with a stopwatch and a crawler spider walks a thread." width="100%">
 </p>
 
 # Search Console Agent
@@ -11,7 +11,7 @@ Search performance, indexing and page experience.
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-059669?logo=python&logoColor=white)](#installation)
 [![MIT license](https://img.shields.io/badge/license-MIT-475569)](LICENSE)
 
-[Quick start](#quick-start) · [Example output](#example-output) · [Tests](#tests) · [Releases](#releases) · [Contributing](CONTRIBUTING.md)
+[Quick start](#quick-start) | [How an audit runs](#how-an-audit-runs) | [Example output](#example-output) | [Tests](#tests) | [Releases](#releases) | [Contributing](CONTRIBUTING.md)
 
 A Python toolkit for Search Console analysis, with adapters for Search Analytics, URL Inspection, sitemaps, Chrome UX Report and PageSpeed Insights. Run a complete audit or retrieve one specific report as JSON.
 
@@ -26,6 +26,23 @@ A Python toolkit for Search Console analysis, with adapters for Search Analytics
 | Site checks | JSON-LD validation, optional HTTP-header, TLS and external page-experience checks |
 | Domain context | Optional Tranco and Open PageRank lookups; these are domain proxies, not a backlink index |
 | Reporting | Prioritized Markdown audits, HTML and optional PDF |
+
+## How an audit runs
+
+```mermaid
+flowchart LR
+  A["Overview<br/>permission, sitemaps, homepage probe"] --> B["Search Analytics"]
+  A --> C["CTR curve"]
+  A --> D["CrUX field data"]
+  A --> E["Structured data sample"]
+  A -. "--with-backlinks" .-> F["Tranco and Open PageRank"]
+  A -. "--with-page-experience" .-> G["Headers, Observatory, SSL Labs"]
+  B & C & D & E & F & G --> H["Report with<br/>confidence label"]
+  classDef step fill:#e8f6f1,stroke:#059669,color:#17202a
+  class A,B,C,D,E,F,G,H step
+```
+
+`gsc_audit.py` runs the overview first, then the remaining checks in parallel. A worker that fails becomes a finding instead of stopping the audit. Confidence starts at `medium` and drops to `low` when search data fails or trend coverage is incomplete. URL Inspection is left out of the audit; run it per URL.
 
 ## Installation
 
@@ -142,7 +159,7 @@ CI runs on Python 3.10–3.13. Tests mock Google and external services and use t
 | Path | Purpose |
 | --- | --- |
 | [scripts/](scripts/) | API adapters, site checks, report rendering and tests |
-| [agents/](agents/) · [skills/](skills/) | SEO specialists and `/gsc` routing |
+| [agents/](agents/), [skills/](skills/) | SEO specialists and `/gsc` routing |
 | [examples/demo/](examples/demo/) | Synthetic inputs and a reproducible report |
 | [docs/](docs/) | Setup, releases and verification |
 
@@ -151,6 +168,10 @@ CI runs on Python 3.10–3.13. Tests mock Google and external services and use t
 **[v0.2.2](https://github.com/arcbaslow/google-search-console-agent/releases/tag/v0.2.2)** - see the [release notes](docs/RELEASE_NOTES.md) for this release and the [changelog](CHANGELOG.md) for project history.
 
 GitHub Releases include downloadable artifacts and checksums. Package-registry publication is a separate, opt-in workflow; a GitHub release does not imply that the same version is available on PyPI or npm. Maintainers can follow the [release guide](docs/RELEASING.md).
+
+## Roadmap
+
+The [evidence-backed roadmap](docs/ROADMAP.md) covers the scoped maintenance pass, API and service research, deferred proposals and verification limits. Local results are recorded in [verification](docs/VERIFICATION.md).
 
 ## Contributing
 
@@ -171,9 +192,3 @@ Maintained by [Good Labs](https://goodlabs.kz) - measurement implementation, tra
 ## License
 
 [MIT](LICENSE) © Dilshat Rakhimov. This is an independent project; it is not an official product of the platform vendors.
-
-## Roadmap
-
-See the [evidence-backed roadmap](docs/ROADMAP.md) for the scoped maintenance
-pass, API and service research, deferred proposals and verification limits.
-Local results are recorded in [verification](docs/VERIFICATION.md).
