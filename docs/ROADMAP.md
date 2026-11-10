@@ -30,7 +30,7 @@ No new service, paid dependency, bulk inspection or write bypass was added.
 | PSI units and authentication | Reviewed; quota header loss fixed in `4eb3c21` using credential `apply()`. `scripts/gsc_psi.py:35`, `scripts/gsc_crux.py:41`; [google-auth contract][auth-headers]. | Current [PSI reference][psi-reference] did not establish CLS scaling. Unit behavior unchanged. Project enablement, permissions and OAuth scope compatibility need credentialed operator verification. |
 | More CrUX diagnostics | Implemented: `44f5d44`; `scripts/gsc_crux.py:162`. Optional complete metric objects for snapshot/history, including distributions and missing periods. | Metric availability varies; diagnostic values have no invented CWV thresholds. [CrUX contract][crux-api]. |
 | Reports and instructions | Implemented: `a72e24e`, `dc2f4ba`, `3ff157d`; `scripts/gsc_report.py:210`. Context/benchmark/source parity, availability-based confidence, invalid-metric handling. Runtime files and affected agents/skills updated together. | Confidence is a convention, not statistical certainty. PDF delegation is mocked; native PDF layout was not visually verified. |
-| Read-only MCP facade | Proposal retained, with acceptance criteria below. | New distribution/auth lifecycle; excluded by the original project-shape limit. |
+| MCP facade | Implemented in 0.3.0: `scripts/gsc_mcp.py`, optional `mcp` extra. Eight read tools, including URL Inspection, plus one confirmed write tool (`delete_sitemap`). See README. | Tested offline only; no live MCP host or account run is recorded here. |
 | Bounded export and local history | Proposal retained. Explicit one-page offsets and aggregate comparisons are available now. | Persistence, retention and pagination completeness require a separate design. |
 | Property-specific CTR reference | Proposal retained. | Requires statistical validation, cohort choices and minimum sample policy; no invented universal replacement curve. |
 | Cross-product analysis | Proposal retained. | GA4 scopes, joins and attribution change the toolkit's scope. |
@@ -55,12 +55,11 @@ rough efforts and risks remain in the Next/Later tables.
   fixtures for each documented alternative, mixed-type nodes, dangling IDs and
   cycles. Keep editorial/content eligibility and Google's display decision
   explicitly unchecked. Do not promote a presence check to eligibility.
-- **MCP facade (about one week):** optional dependency and read-only stdio tools
-  that call the Python adapters directly. Initially exclude site/sitemap writes
-  and URL Inspection. Define process-local auth/cache lifecycle, structured
-  errors and per-call limits. Acceptance requires protocol tests, parity with
-  adapter output, no credentials in responses and no background crawling.
-  Existing comparator evidence: [AminForou][mcp], [AkashRajpurohit][mcp-compare].
+- **MCP facade:** built in 0.3.0 (`scripts/gsc_mcp.py`); this proposal is
+  superseded. It differs from the original scope: URL Inspection is a read tool,
+  and `delete_sitemap` is exposed through `register_writes` with a dry run and a
+  single-use confirm token. Comparator evidence: [AminForou][mcp],
+  [AkashRajpurohit][mcp-compare].
 - **Export/history (about one week):** separately opt-in local storage with
   explicit property, dates, row/request caps, stop reason, schema version,
   aggregation type and collection timestamp. Distinguish an exhausted page
@@ -169,7 +168,7 @@ header-failure findings introduced by the combined-source error reporting.
 
 | Item | What and SEO value | Evidence | Effort | Risk / decision |
 | --- | --- | --- | --- | --- |
-| Read-only MCP facade | Let more agent clients discover existing adapters without maintaining shell instructions. | [AminForou MCP][mcp], [AkashRajpurohit MCP][mcp-compare]; this repo exposes scripts and Claude-specific skills. | 1 week | Changes distribution/auth lifecycle. Proposal only; scripts must stay authoritative. |
+| MCP facade | Let more agent clients discover existing adapters without maintaining shell instructions. | [AminForou MCP][mcp], [AkashRajpurohit MCP][mcp-compare]; this repo exposes scripts and Claude-specific skills. | 1 week | Built in 0.3.0 (`scripts/gsc_mcp.py`); the scripts stay authoritative. |
 | Bounded export and local history | Optional pagination/export with explicit caps, weighted aggregate comparisons and provenance. Useful for repeatable SEO reporting beyond top rows. | [query limits][query], [Python toolkit][python-toolkit], [better-search-console][better-mcp]. | 1 week | Storage/privacy and export completeness; GSC does not guarantee every row even with pagination. |
 | Property-specific CTR reference | Compare similar device/country/brand/query cohorts using the user's own data, with uncertainty and a minimum sample. | Published [FPS][fps], [Backlinko][backlinko], [Sistrix][sistrix] estimates differ; `gsc_benchmarks.py` has one universal table. | 1 week | A statistical feature needs validation and sufficient data; no new universal curve invented here. |
 | Cross-product analysis | Join GSC with GA4 only through a separately designed read-only integration. | [Google SEO MCP project][cross-product] documents GSC/GA4 diagnostics. | 2+ weeks | New scopes, joins, attribution caveats and project shape. Not part of this toolkit pass. |

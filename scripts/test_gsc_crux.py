@@ -130,3 +130,88 @@ def test_crux_cli_exposes_diagnostics(monkeypatch, capsys):
     monkeypatch.setattr("sys.argv", ["gsc_crux", "--origin", "https://example.com", "--diagnostics"])
     assert gsc_crux.main() == 0
     assert query.call_args.kwargs["diagnostics"] is True
+
+
+
+API_KEY = "synthetic-api-key-0123456789"
+
+
+@pytest.fixture
+def keyed(monkeypatch):
+    monkeypatch.setenv("PAGESPEED_API_KEY", API_KEY)
+    lookup = MagicMock(side_effect=AssertionError("no credential lookup with an API key"))
+    monkeypatch.setattr(gsc_crux, "_auth_headers", lookup)
+    monkeypatch.setattr(gsc_crux, "get_credentials", lookup)
+    return lookup
+
+
+def ok_response():
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.read.return_value = b'{"record":{}}'
+    return response
+
+
+def test_api_key_is_a_query_parameter_with_no_authorization_or_credential_lookup(
+        keyed, monkeypatch):
+    fetch = MagicMock(return_value=ok_response())
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    gsc_crux._post(gsc_crux.CRUX_QUERY_URL, {"origin": "https://example.com"})
+    req = fetch.call_args.args[0]
+    assert req.full_url == f"{gsc_crux.CRUX_QUERY_URL}?key={API_KEY}"
+    assert req.method == "POST" and not req.has_header("Authorization")
+    assert req.get_header("Content-type") == "application/json"
+    assert json.loads(req.data) == {"origin": "https://example.com"}
+    keyed.assert_not_called()
+
+
+def test_without_a_key_the_url_has_no_query_and_the_bearer_token_is_sent(monkeypatch):
+    monkeypatch.setattr(gsc_crux, "_auth_headers", lambda: {"Authorization": "Bearer synthetic"})
+    fetch = MagicMock(return_value=ok_response())
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    monkeypatch.setenv("PAGESPEED_API_KEY", "  ")
+    gsc_crux._post(gsc_crux.CRUX_HISTORY_URL, {"origin": "https://example.com"})
+    req = fetch.call_args.args[0]
+    assert req.full_url == gsc_crux.CRUX_HISTORY_URL
+    assert req.get_header("Authorization") == "Bearer synthetic"
+
+
+@pytest.mark.parametrize("method", [gsc_crux.query_record, gsc_crux.query_history])
+def test_api_key_stays_out_of_the_cache_and_does_not_change_its_identity(
+        keyed, monkeypatch, tmp_cache_dir, method):
+    fetch = MagicMock(side_effect=lambda *a, **kw: ok_response())
+    monkeypatch.setattr("urllib.request.urlopen", fetch)
+    first = method(origin="https://example.com")
+    files = list((tmp_cache_dir / "gsc-cache").iterdir())
+    assert files
+    for path in files:
+        assert API_KEY not in path.name and API_KEY not in path.read_text(encoding="utf-8")
+    monkeypatch.delenv("PAGESPEED_API_KEY")
+    assert method(origin="https://example.com") == first
+    assert fetch.call_count == 1
+
+
+@pytest.mark.parametrize("status", [400, 403, 429, 500])
+def test_errors_never_echo_the_request_url_or_key(keyed, monkeypatch, status):
+    echo = json.dumps({"error": {"message": f"Bad request: {gsc_crux.CRUX_QUERY_URL}?key={API_KEY}",
+                                 "status": "INVALID_ARGUMENT"}}).encode()
+    monkeypatch.setattr("urllib.request.urlopen", MagicMock(side_effect=urllib.error.HTTPError(
+        f"{gsc_crux.CRUX_QUERY_URL}?key={API_KEY}", status, "error", {}, io.BytesIO(echo))))
+    with pytest.raises(RuntimeError) as caught:
+        gsc_crux.query_record(origin="https://example.com", use_cache=False)
+    assert API_KEY not in str(caught.value) and API_KEY not in json.dumps(caught.value.details)
+
+
+def test_no_data_result_does_not_carry_an_echoed_body_or_key(keyed, monkeypatch):
+    body = f"no data for {gsc_crux.CRUX_QUERY_URL}?key={API_KEY}".encode()
+    monkeypatch.setattr("urllib.request.urlopen", MagicMock(side_effect=urllib.error.HTTPError(
+        "url", 404, "absent", {}, io.BytesIO(body))))
+    out = gsc_crux.query_record(origin="https://example.com", use_cache=False)
+    assert out["status"] == "no_data" and API_KEY not in json.dumps(out)
+
+
+def test_cli_help_mentions_the_api_key_variable(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["gsc_crux.py", "--help"])
+    with pytest.raises(SystemExit):
+        gsc_crux.main()
+    assert "PAGESPEED_API_KEY" in capsys.readouterr().out

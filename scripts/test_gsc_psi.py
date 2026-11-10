@@ -156,3 +156,73 @@ def test_google_quota_project_headers_are_applied_without_disk(monkeypatch, modu
     headers = module._auth_headers()
     assert headers["authorization"] == "Bearer synthetic"
     assert headers["x-goog-user-project"] == "synthetic-project"
+
+
+
+API_KEY = "synthetic-api-key-0123456789"
+
+
+@pytest.fixture
+def keyed(psi_http, monkeypatch):
+    monkeypatch.setenv("PAGESPEED_API_KEY", API_KEY)
+    lookup = MagicMock(side_effect=AssertionError("no credential lookup with an API key"))
+    monkeypatch.setattr(gsc_psi, "_auth_headers", lookup)
+    monkeypatch.setattr(gsc_psi, "get_credentials", lookup)
+    return psi_http[0], lookup
+
+
+def test_api_key_is_a_query_parameter_with_no_authorization_or_credential_lookup(keyed):
+    opener, lookup = keyed
+    gsc_psi.run_psi("https://example.com/", use_cache=False)
+    req = opener.call_args.args[0]
+    query = parse_qs(urlsplit(req.full_url).query)
+    assert query["key"] == [API_KEY]
+    assert query["url"] == ["https://example.com/"] and "category" in query
+    assert not req.has_header("Authorization")
+    assert req.get_header("Accept") == "application/json"
+    lookup.assert_not_called()
+
+
+def test_key_is_read_at_call_time_and_blank_means_the_bearer_token(psi_http, monkeypatch):
+    opener, _ = psi_http
+    monkeypatch.setenv("PAGESPEED_API_KEY", "  ")
+    gsc_psi.run_psi("https://example.com/", use_cache=False)
+    req = opener.call_args.args[0]
+    assert "key" not in parse_qs(urlsplit(req.full_url).query)
+    assert req.get_header("Authorization") == "Bearer synthetic-token"
+    monkeypatch.setenv("PAGESPEED_API_KEY", API_KEY)
+    gsc_psi.run_psi("https://example.com/", use_cache=False)
+    assert "key=" in opener.call_args.args[0].full_url
+
+
+def test_api_key_stays_out_of_the_cache_and_does_not_change_its_identity(
+        psi_http, monkeypatch, tmp_cache_dir):
+    opener, _ = psi_http
+    monkeypatch.setenv("PAGESPEED_API_KEY", API_KEY)
+    first = gsc_psi.run_psi("https://example.com/")
+    files = list((tmp_cache_dir / "gsc-cache").iterdir())
+    assert files
+    for path in files:
+        assert API_KEY not in path.name and API_KEY not in path.read_text(encoding="utf-8")
+    monkeypatch.delenv("PAGESPEED_API_KEY")
+    assert gsc_psi.run_psi("https://example.com/") == first
+    assert opener.call_count == 1
+
+
+@pytest.mark.parametrize("status", [400, 403, 429, 500])
+def test_errors_never_echo_the_request_url_or_key(keyed, status):
+    opener, _ = keyed
+    echo = json.dumps({"error": {"message": f"Bad request: {gsc_psi.PSI_ENDPOINT}?key={API_KEY}",
+                                 "status": "INVALID_ARGUMENT"}}).encode()
+    opener.side_effect = urllib.error.HTTPError(
+        f"{gsc_psi.PSI_ENDPOINT}?key={API_KEY}", status, "error", {}, io.BytesIO(echo))
+    with pytest.raises(RuntimeError) as caught:
+        gsc_psi.run_psi("https://example.com/", use_cache=False)
+    assert API_KEY not in str(caught.value) and API_KEY not in json.dumps(caught.value.details)
+
+
+def test_cli_help_mentions_the_api_key_variable(monkeypatch, capsys):
+    monkeypatch.setattr("sys.argv", ["gsc_psi.py", "--help"])
+    with pytest.raises(SystemExit):
+        gsc_psi.main()
+    assert "PAGESPEED_API_KEY" in capsys.readouterr().out

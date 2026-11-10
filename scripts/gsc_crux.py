@@ -11,6 +11,12 @@ Two endpoints:
 For origin-level audits CrUX is the right call because it covers the
 whole site, not a single URL. For per-page deep dives use `gsc_psi.py`.
 
+Authentication: CrUX authenticates with an API key (its discovery document declares
+no OAuth scopes). When PAGESPEED_API_KEY is set (read at call time) it is sent as the
+`key` query parameter and no credential lookup happens. Otherwise a bearer token from
+the shared credential resolver is sent; CrUX declares no OAuth, so it is expected to be
+refused (HTTP 400 observed; not covered by this repo's offline checks).
+
 CLI:
   python scripts/gsc_crux.py --origin https://example.com --json
   python scripts/gsc_crux.py --url https://example.com/products --json
@@ -25,11 +31,12 @@ import json
 import math
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any
 
 from gsc_auth import get_credentials
-from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details
+from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details, pagespeed_api_key
 
 CRUX_QUERY_URL = "https://chromeuxreport.googleapis.com/v1/records:queryRecord"
 CRUX_HISTORY_URL = "https://chromeuxreport.googleapis.com/v1/records:queryHistoryRecord"
@@ -52,11 +59,13 @@ def _auth_headers() -> dict[str, str]:
 
 
 def _post(endpoint: str, body: dict[str, Any]) -> dict[str, Any]:
+    key = pagespeed_api_key()
+    url = f"{endpoint}?{urllib.parse.urlencode({'key': key})}" if key else endpoint
     req = urllib.request.Request(
-        endpoint,
+        url,
         data=json.dumps(body).encode("utf-8"),
         headers={
-            **_auth_headers(),
+            **({} if key else _auth_headers()),
             "Content-Type": "application/json",
             "Accept": "application/json",
         },
@@ -211,7 +220,10 @@ def _clean_missing(value):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Chrome UX Report wrapper")
+    parser = argparse.ArgumentParser(
+        description="Chrome UX Report wrapper",
+        epilog="Authentication: set PAGESPEED_API_KEY to send a Google API key instead of "
+               "the bearer token (CrUX is expected to refuse the bearer token).")
     parser.add_argument("--origin", help="Site origin (e.g. https://example.com)")
     parser.add_argument("--url", help="Single URL (mutually exclusive with --origin)")
     parser.add_argument("--form-factor", default="ALL_FORM_FACTORS", choices=FORM_FACTORS)

@@ -154,6 +154,16 @@ def normalize_site_url(site: str) -> str:
         return f"sc-domain:{site}"
     return site
 
+
+PAGESPEED_API_KEY_ENV = "PAGESPEED_API_KEY"
+
+
+def pagespeed_api_key() -> str | None:
+    """API key for PSI and CrUX, read at call time. Unset or blank means use the bearer
+    token. The key is a secret: callers send it as the `key` query parameter only and
+    never put it in a cache key, an error detail or a log line."""
+    return os.environ.get(PAGESPEED_API_KEY_ENV, "").strip() or None
+
 # ---------- Google read transport ----------
 
 class ApiReadError(RuntimeError):

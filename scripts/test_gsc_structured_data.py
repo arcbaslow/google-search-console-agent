@@ -125,14 +125,14 @@ PRODUCT_HTML = """<html><head>
 
 
 def test_analyze_url_returns_summary(monkeypatch):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url: PRODUCT_HTML)
+    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url, opener=None: PRODUCT_HTML)
     out = gsc_structured_data.analyze_url("https://example.com/p/foo")
     assert out["block_count"] == 1
     assert out["types_found"] == ["Product"]
 
 
 def test_analyze_url_fetch_failure(monkeypatch):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url: None)
+    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url, opener=None: None)
     out = gsc_structured_data.analyze_url("https://example.com/p/foo")
     assert out["error"] == "fetch_failed"
 
@@ -149,7 +149,7 @@ def test_analyze_sitemap_sample_rolls_up(monkeypatch):
     urls = [f"https://example.com/p/{i}" for i in range(5)]
     monkeypatch.setattr(gsc_structured_data, "_fetch_sitemap_urls",
                         lambda site, limit, **kw: urls)
-    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url: PRODUCT_HTML)
+    monkeypatch.setattr(gsc_structured_data, "_fetch_html", lambda url, opener=None: PRODUCT_HTML)
     out = gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=5)
     assert out["sample_size"] == 5
     rollup = out["rollup"]
@@ -213,7 +213,7 @@ def test_sitemap_namespaces_entities_duplicates_and_stable_sampling(monkeypatch)
     <s:url><s:loc>https://example.com/b</s:loc></s:url>
     <s:url><s:loc>https://example.com/b</s:loc></s:url>
     <s:url><s:loc>https://outside.test/a</s:loc></s:url></s:urlset>"""
-    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: xml)
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _, opener=None: xml)
     info = {}
     first = gsc_structured_data._fetch_sitemap_urls("example.com", 10, diagnostics=info)
     assert set(first) == {"https://example.com/a?x=1&y=2", "https://example.com/b"}
@@ -227,7 +227,7 @@ def test_sitemap_traversal_is_bounded_and_prefix_is_retained(monkeypatch):
     from unittest.mock import MagicMock
     index = '<sitemapindex>' + ''.join(
         f'<sitemap><loc>https://example.com/child{i}.xml</loc></sitemap>' for i in range(20)) + '</sitemapindex>'
-    fetch = MagicMock(side_effect=lambda url: index if url.endswith('sitemap.xml') else
+    fetch = MagicMock(side_effect=lambda url, opener=None: index if url.endswith('sitemap.xml') else
         '<urlset><url><loc>https://example.com/shop/a</loc></url>'
         '<url><loc>https://example.com/outside</loc></url></urlset>')
     monkeypatch.setattr(gsc_structured_data, "_fetch_text", fetch)
@@ -239,7 +239,7 @@ def test_sitemap_traversal_is_bounded_and_prefix_is_retained(monkeypatch):
 
 @pytest.mark.parametrize("xml", ["<urlset>", '<!DOCTYPE urlset [<!ENTITY x "hi">]><urlset/>'])
 def test_invalid_sitemaps_are_disclosed(monkeypatch, xml):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: xml)
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _, opener=None: xml)
     result = gsc_structured_data.analyze_sitemap_sample("example.com")
     assert result["error"] == "no_sitemap_urls"
     assert result["sampling"]["sitemap_requests"] == 2
@@ -248,12 +248,82 @@ def test_invalid_sitemaps_are_disclosed(monkeypatch, xml):
 
 @pytest.mark.parametrize("limit", [0, -1, 101, True])
 def test_sample_limits_fail_before_fetch(monkeypatch, limit):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: pytest.fail("no fetch"))
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _, opener=None: pytest.fail("no fetch"))
     with pytest.raises(ValueError, match="between 1 and 100"):
         gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=limit)
 
 def test_prefix_without_slash_does_not_include_host_suffix(monkeypatch):
-    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _: '<urlset>'
+    monkeypatch.setattr(gsc_structured_data, "_fetch_text", lambda _, opener=None: '<urlset>'
         '<url><loc>https://example.com.evil.test/a</loc></url>'
         '<url><loc>https://example.com/a</loc></url></urlset>')
     assert gsc_structured_data._fetch_sitemap_urls("https://example.com", 10) == ["https://example.com/a"]
+
+
+
+class FakeOpener:
+    """Stands in for a urllib opener and serves fixed bodies by URL."""
+
+    def __init__(self, pages):
+        self.pages = pages
+        self.urls = []
+
+    def open(self, request, timeout=None):
+        import io
+
+        self.urls.append(request.full_url)
+        body = self.pages[request.full_url].encode()
+
+        class Response(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        return Response(body)
+
+
+def test_fetch_helpers_use_the_given_opener_instead_of_urlopen(monkeypatch):
+    monkeypatch.setattr(gsc_structured_data.urllib.request, "urlopen",
+                        lambda *a, **k: pytest.fail("urlopen must not be used"))
+    opener = FakeOpener({"https://example.com/a": "<html>page</html>",
+                         "https://example.com/s.xml": "<urlset/>"})
+    assert gsc_structured_data._fetch_html("https://example.com/a", opener) == "<html>page</html>"
+    assert gsc_structured_data._fetch_text("https://example.com/s.xml", opener) == "<urlset/>"
+    assert opener.urls == ["https://example.com/a", "https://example.com/s.xml"]
+
+
+def test_fetch_helpers_default_to_urlopen(monkeypatch):
+    import io
+    from unittest.mock import MagicMock
+
+    response = MagicMock()
+    response.__enter__.side_effect = lambda: io.BytesIO(b"body")
+    urlopen = MagicMock(return_value=response)
+    monkeypatch.setattr(gsc_structured_data.urllib.request, "urlopen", urlopen)
+    assert gsc_structured_data._fetch_html("https://example.com/a") == "body"
+    assert gsc_structured_data._fetch_text("https://example.com/a") == "body"
+    assert urlopen.call_count == 2
+    assert all(call.kwargs == {"timeout": gsc_structured_data.FETCH_TIMEOUT_S}
+               for call in urlopen.call_args_list)
+
+
+def test_opener_reaches_the_sitemap_pages_and_every_sample_fetch(monkeypatch):
+    monkeypatch.setattr(gsc_structured_data.urllib.request, "urlopen",
+                        lambda *a, **k: pytest.fail("urlopen must not be used"))
+    opener = FakeOpener({
+        "https://example.com/sitemap.xml": '<urlset><url><loc>https://example.com/a</loc></url>'
+                                           '<url><loc>https://example.com/b</loc></url></urlset>',
+        "https://example.com/a": PRODUCT_HTML,
+        "https://example.com/b": PRODUCT_HTML,
+    })
+    out = gsc_structured_data.analyze_sitemap_sample("example.com", sample_size=5, opener=opener)
+    assert out["rollup"]["urls_analyzed"] == 2
+    assert sorted(opener.urls) == ["https://example.com/a", "https://example.com/b",
+                                   "https://example.com/sitemap.xml"]
+
+
+def test_analyze_url_passes_the_opener_through():
+    opener = FakeOpener({"https://example.com/a": PRODUCT_HTML})
+    out = gsc_structured_data.analyze_url("https://example.com/a", opener=opener)
+    assert out["block_count"] == 1 and opener.urls == ["https://example.com/a"]

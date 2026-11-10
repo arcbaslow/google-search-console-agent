@@ -72,12 +72,13 @@ RETIRED_TYPES = {"FAQPage", "HowTo"}
 CONTEXTUAL_TYPES = {"Product", "JobPosting", "Review", "AggregateRating", "BreadcrumbList", "Course"}
 
 
-def _fetch_html(url: str) -> str | None:
+def _fetch_html(url: str, opener=None) -> str | None:
     req = urllib.request.Request(url, headers={
         "User-Agent": USER_AGENT, "Accept": "text/html,application/xhtml+xml",
     })
+    open_url = urllib.request.urlopen if opener is None else opener.open
     try:
-        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_S) as resp:
+        with open_url(req, timeout=FETCH_TIMEOUT_S) as resp:
             return resp.read(1_500_000).decode("utf-8", errors="replace")
     except (urllib.error.URLError, urllib.error.HTTPError,
             TimeoutError, ConnectionError):
@@ -183,9 +184,9 @@ def validate_block(block: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def analyze_url(url: str) -> dict[str, Any]:
+def analyze_url(url: str, opener=None) -> dict[str, Any]:
     """Fetch + extract + validate. Returns a structured per-block report."""
-    html = _fetch_html(url)
+    html = _fetch_html(url, opener)
     if html is None:
         return {"url": url, "error": "fetch_failed"}
     blocks = extract_jsonld(html)
@@ -231,7 +232,8 @@ def _sitemap_entries(text):
     return kind, locations
 
 
-def _fetch_sitemap_urls(site_url: str, limit: int, *, diagnostics=None) -> list[str]:
+def _fetch_sitemap_urls(site_url: str, limit: int, *, diagnostics=None,
+                        opener=None) -> list[str]:
     """Bounded one-level sitemap discovery with a stable hash-ordered sample."""
     from gsc_utils import normalize_site_url
 
@@ -252,7 +254,7 @@ def _fetch_sitemap_urls(site_url: str, limit: int, *, diagnostics=None) -> list[
             return None
         visited.add(url)
         info["sitemap_requests"] += 1
-        text = _fetch_text(url)
+        text = _fetch_text(url, opener)
         if not text:
             info["issues"].append({"url": url, "error": "fetch_failed_or_empty"})
             return None
@@ -298,22 +300,25 @@ def _fetch_sitemap_urls(site_url: str, limit: int, *, diagnostics=None) -> list[
     return sorted(eligible, key=lambda u: (hashlib.sha256(u.encode()).hexdigest(), u))[:limit]
 
 
-def _fetch_text(url: str) -> str | None:
+def _fetch_text(url: str, opener=None) -> str | None:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    open_url = urllib.request.urlopen if opener is None else opener.open
     try:
-        with urllib.request.urlopen(req, timeout=FETCH_TIMEOUT_S) as resp:
+        with open_url(req, timeout=FETCH_TIMEOUT_S) as resp:
             return resp.read(2_000_000).decode("utf-8", errors="replace")
     except (urllib.error.URLError, urllib.error.HTTPError,
             TimeoutError, ConnectionError):
         return None
 
 
-def analyze_sitemap_sample(site_url: str, sample_size: int = 20) -> dict[str, Any]:
+def analyze_sitemap_sample(site_url: str, sample_size: int = 20,
+                           opener=None) -> dict[str, Any]:
     sampling = {}
-    urls = _fetch_sitemap_urls(site_url, sample_size, diagnostics=sampling)
+    urls = _fetch_sitemap_urls(site_url, sample_size, diagnostics=sampling,
+                               opener=opener)
     if not urls:
         return {"site_url": site_url, "error": "no_sitemap_urls", "sampling": sampling}
-    per_url = [analyze_url(u) for u in urls]
+    per_url = [analyze_url(u, opener) for u in urls]
     rollup = _rollup(per_url)
     return {
         "site_url": site_url,

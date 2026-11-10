@@ -100,7 +100,8 @@ not total slow-stream duration. No blanket retry policy was added.
 The roadmap retains the larger Open PageRank migration, context-aware schema
 rules, date/hourly queries, quota-aware transport, cache privacy/consistency,
 XML/trend fixes, expanded CrUX metrics and report parity as proposals. MCP,
-storage/export, learned CTR references and GA4 integration remain Later.
+storage/export, learned CTR references and GA4 integration remain Later. (MCP was
+built afterwards, in 0.3.0; see the README.)
 Uncertain PSI units/authentication and ambiguous audit policies were left
 unchanged. No bulk inspection or new write surface was added.
 
@@ -190,7 +191,7 @@ passed through; native PDF rendering/layout was not exercised. No live service
 or account capability is inferred from these checks.
 
 The current roadmap records all unbuilt proposals and why: contextual schema
-rules need a rule model; MCP, persistent history, cohort CTR and GA4 integration
-are substantial scope changes. Historical cache deletion and cross-process
+rules need a rule model; persistent history, cohort CTR and GA4 integration are
+substantial scope changes. (MCP, listed here at the time, was built in 0.3.0.) Historical cache deletion and cross-process
 ordering also remain separate designs. PSI CLS units and live authentication,
 quota/service behavior and deployment-specific data permissions remain unverified.

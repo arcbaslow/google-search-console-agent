@@ -32,10 +32,12 @@ sitemap CRUD) and tell the user to run that gcloud command. Write
 features (sitemap submit/delete, site add/delete) need the
 `webmasters` scope without the `.readonly` suffix.
 
-PSI and CrUX adapters currently send a bearer token from the same credential
-resolver. They have no API-key flag. Project enablement, quota attribution
-and scope compatibility were not verified live; see the authentication
-review in docs/ROADMAP.md before assuming a GSC login covers both services.
+PSI and CrUX adapters send a Google API key as the `key` query parameter when
+`PAGESPEED_API_KEY` is set (read at call time, never written to output, logs or
+cache). Without it they send a bearer token from the same credential resolver.
+Project enablement, quota attribution and scope compatibility were not verified
+live by this repo's checks; see the authentication review in docs/ROADMAP.md
+before assuming a GSC login covers both services.
 
 ## Universal CLI
 
@@ -319,7 +321,10 @@ list. A successful sitemap submit/delete invalidates only that property's
 sitemap list. Cancelled or failed API calls leave cached entries unchanged;
 unrelated properties and URL Inspection caches are preserved.
 
-All writes still show resolved targets and require `y/N`. If local cache
+All CLI writes still show resolved targets and require `y/N`. The MCP
+`delete_sitemap` tool uses a dry run and a single-use confirm token instead, and
+drops that property's cached sitemap list whenever its delete request was sent,
+whatever the outcome. If local cache
 invalidation fails after the API succeeds, the success status is preserved
 with `cache_warning`; surface it and do not repeat the remote write. Cache
 invalidation does not guarantee upstream read-after-write consistency or
