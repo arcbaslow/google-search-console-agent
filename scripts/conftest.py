@@ -11,7 +11,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 @pytest.fixture(autouse=True)
 def tmp_cache_dir(monkeypatch, tmp_path):
-    """Redirect cache and credentials to a temp dir for every test."""
+    """Redirect cache and credentials to a temp dir for every test, and keep a real
+    PageSpeed API key in the environment from changing how requests are authenticated."""
+    monkeypatch.delenv("PAGESPEED_API_KEY", raising=False)
     cache_dir = tmp_path / "gsc-cache"
     creds_path = tmp_path / "gsc-credentials.json"
     import gsc_auth

@@ -145,6 +145,45 @@ The bundled CTR curve is a historical reference, not a prediction for every quer
 
 The report defaults to `medium` confidence and drops to `low` when search-data retrieval fails or calendar-trend coverage is incomplete. That label is an audit convention, not an estimate of Search Console sampling.
 
+## MCP
+
+`scripts/gsc_mcp.py` exposes the adapters to MCP hosts: eight read tools and one write tool.
+
+```bash
+python -m pip install -e ".[mcp]"
+gsc-mcp                      # stdio server with the read tools, FastMCP name google-search-console-agent
+```
+
+A host that already runs a FastMCP server can import the module instead. `gsc_mcp.register(server, prefix)` adds the read tools (names are prefixed, for example `gsc_list_sites`) and returns how many it added. `gsc_mcp.register_writes(server, gate, prefix)` adds the write tool; `gate()` is called before every confirmed write and returns `None` to allow it or an error dict that the tool returns as the result, after the same PII scrubbing as every other output. `gsc_mcp.credentials_present()` says whether any credential source exists without a network call. Requires `mcp>=1.28.1,<2`.
+
+| Tool | What it does | Scope or key |
+| --- | --- | --- |
+| `list_sites` | Search Console properties the credentials can access, with permission level | `webmasters.readonly` |
+| `search_analytics` | Clicks, impressions, CTR and position by dimension, with filter, explicit dates, paging and an optional previous-period comparison (aggregate totals only) | `webmasters.readonly` |
+| `compare_periods` | Two equal-length periods by query, page, country, device or search appearance, with per-row deltas for clicks, impressions, CTR and position; final data only | `webmasters.readonly` |
+| `inspect_url` | URL Inspection for one URL: index status, canonical, last crawl, rich results | `webmasters.readonly` |
+| `list_sitemaps` | Submitted sitemaps with error and warning counts, worst first | `webmasters.readonly` |
+| `page_speed` | PageSpeed Insights (`source=psi`), CrUX snapshot (`crux`) or CrUX weekly history (`crux_history`), for a URL or its origin | `PAGESPEED_API_KEY` |
+| `crux_history` | CrUX history of LCP, INP and CLS p75 for an origin (`https://example.com`) or a URL (anything with a path), 25 weekly periods | `PAGESPEED_API_KEY` |
+| `structured_data` | JSON-LD checks for one public URL or a bounded sitemap sample | none (fetches public pages) |
+| `delete_sitemap` (write) | Removes a sitemap from the Sitemaps report after a dry run; `destructiveHint` is set | `webmasters` |
+
+**Authentication.** The read tools call `gsc_auth.get_credentials(write=False)`, so they use `GOOGLE_APPLICATION_CREDENTIALS`, the gcloud ADC file (`python scripts/gsc_auth.py --adc` prints the command) or `~/.claude/gsc-credentials.json`, in that order, and request only `https://www.googleapis.com/auth/webmasters.readonly`. `delete_sitemap` reads the entry with the same credentials and sends the delete with `get_credentials(write=True)`, which needs `https://www.googleapis.com/auth/webmasters`; `python scripts/gsc_auth.py --adc --write` prints the sign-in command. Credentials signed in with the read-only scope get `auth_required` or `permission_denied` from it, with a hint naming the missing scope. A failure returns `{"error": ..., "hint": ...}` with one of `auth_required`, `permission_denied`, `quota_exceeded`, `invalid_argument`, `not_found`, `conflict` or `upstream_error`; credentials and tokens never appear in results, hints or logs.
+
+**Writes.** A `delete_sitemap` call without `confirm` sends nothing: it reads the entry (`sitemaps.get`) and returns it with a 32-character `confirm` token valid for 10 minutes. The identical call with that token sends one `sitemaps.delete`, which this module never retries. The underlying HTTP library (httplib2) can resend a request on a stale or dropped connection, and that is not disabled here. A token works once and only for the same arguments; if the entry's `lastSubmitted` changed in between, the result is `conflict` and nothing is sent. A refused gate keeps the token. A timeout or server error on the delete is reported as possibly applied, so call `list_sitemaps` before trying again; whenever the delete request was sent, the property's cached sitemap list is dropped first, so that call reads fresh data. A credential refresh failure happens before anything is sent: it returns `auth_required` and keeps the token. Each confirmed write logs one line, `gsc write delete_sitemap <property> outcome=<ok or category>`. Submitting a sitemap is not part of this module.
+
+**PageSpeed and CrUX use an API key, not the OAuth token.** Set `PAGESPEED_API_KEY` in the environment of the process that runs the tools to a Google API key from a Cloud project with the PageSpeed Insights API and the Chrome UX Report API enabled. The key is sent as the `key` query parameter, those tools then do no credential lookup, and the key never appears in output, errors, logs or cache entries. Without it, `page_speed` and `crux_history` return `auth_required` with this instruction when Google refuses the OAuth token. `credentials_present()` does not count the key. The same variable works for `gsc_psi.py` and `gsc_crux.py` on the command line.
+
+**Quotas and bounds.**
+
+| Source | Limit |
+| --- | --- |
+| URL Inspection | 2,000 inspections per day and 600 per minute per site; never retried |
+| Search Analytics, sites, sitemaps | One retry for transient read errors; writes are never retried; quotas are shared with other clients |
+| PageSpeed Insights, CrUX | Own API quotas, charged to the key's project; no retry. PSI can take up to a minute, and the raw Lighthouse payload is not returned |
+
+List-style tools take `limit` (`list_sites` 100 of 500, `search_analytics` and `compare_periods` 100 of 500 rows per period, `list_sitemaps` 100 of 200, `page_speed` CrUX history 25 of 40 periods, `structured_data` 10 of 25 sampled URLs) and return `rows_returned` and `complete`. Search Console returns top rows, not an exhaustive export; in `compare_periods` a row missing from one period has null values and deltas there, not zeros. Keys are compared after PII redaction, so a key that was redacted or that repeats within a period is never joined: those rows are listed per period with `ambiguous_key` and null deltas, and `complete` is false. Results are cached for 15 minutes under `~/.claude/gsc-cache`, so that directory must be writable. `structured_data` fetches pages from the machine running the server. Every connection it opens, including each redirect hop, child sitemap and sampled page, resolves the host once, refuses unless all answers are public (global) addresses (IPv4-mapped and NAT64 `64:ff9b::/96` answers are judged by their embedded IPv4 address), and connects to the validated address while keeping the hostname for TLS. Only HTTP and HTTPS are spoken and proxy settings are ignored.
+
 ## Tests
 
 ```bash

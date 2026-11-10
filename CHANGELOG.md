@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## [0.3.0] - 2026-11-10
+
+- Add an MCP tool set (`gsc-mcp`, `scripts/gsc_mcp.py`, optional `mcp` extra). `register(server, prefix)` adds eight read tools: list sites, Search Analytics with previous-period comparison, URL Inspection, sitemaps, PageSpeed/CrUX, JSON-LD checks, `compare_periods` (two equal-length periods with per-row deltas, final data only) and `crux_history` (CrUX Core Web Vitals history for a URL or origin). They request only the read-only scope, outputs are bounded and scrubbed, and failures come back as structured errors. Structured-data fetches go through an opener that connects only to validated public addresses on every redirect hop and sitemap fetch; the `gsc_structured_data` fetch functions take an optional `opener` argument and behave as before without it. `compare_periods` never joins rows whose keys were redacted as personal data.
+
+- Add `register_writes(server, gate, prefix)` with one write tool, `delete_sitemap`: a call without `confirm` reads the sitemap entry and returns a single-use token, the identical call with the token sends the delete. It needs the `webmasters` scope; a missing scope or permission comes back as `auth_required` or `permission_denied` naming the scope. This module never retries the delete, and drops the cached sitemap list whenever the request was sent.
+
+- Add optional API-key authentication to PSI and CrUX through the `PAGESPEED_API_KEY` environment variable, read at call time: the key is sent as the `key` query parameter with no credential lookup, and never appears in output, errors, logs or cache entries. Without the variable behaviour is unchanged.
+
 - Document the remaining roadmap dispositions, concrete deferred designs and verification limits; refresh command guidance.
 
 - Reject grouped or offset inputs to Python period comparisons and disclose that aggregate queries do not verify daily coverage.

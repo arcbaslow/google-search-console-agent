@@ -6,8 +6,12 @@ Web Vitals (LCP, INP, CLS plus FCP/TTFB diagnostics) if CrUX has enough data for
 that URL. It is the right tool for per-page deep inspection; for
 origin-level CWV history use `gsc_crux.py` instead.
 
-Authentication: sends a bearer token from the shared credential resolver.
-Live scope/quota-project compatibility remains unverified; see docs/ROADMAP.md.
+Authentication: when PAGESPEED_API_KEY is set (read at call time) the key is sent as
+the `key` query parameter and no credential lookup happens. Otherwise a bearer token
+from the shared credential resolver is sent. The PSI discovery document lists only the
+`openid` scope for runPagespeed, so a token limited to the Search Console scopes is
+expected to be refused (HTTP 403 ACCESS_TOKEN_SCOPE_INSUFFICIENT observed; not covered
+by this repo's offline checks).
 
 CLI:
   python scripts/gsc_psi.py --url https://example.com --strategy mobile --json
@@ -25,7 +29,7 @@ import urllib.request
 from typing import Any
 
 from gsc_auth import get_credentials
-from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details
+from gsc_utils import ApiReadError, cache_get, cache_set, http_error_details, pagespeed_api_key
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 DEFAULT_CATEGORIES = ("performance", "seo", "accessibility", "best-practices")
@@ -66,10 +70,13 @@ def run_psi(url: str, strategy: str = "mobile",
     ]
     for c in categories:
         qs.append(("category", c))
+    key = pagespeed_api_key()
+    if key:
+        qs.append(("key", key))
     full = f"{PSI_ENDPOINT}?{urllib.parse.urlencode(qs)}"
 
     req = urllib.request.Request(full, headers={
-        **_auth_headers(),
+        **({} if key else _auth_headers()),
         "Accept": "application/json",
     })
     try:
@@ -137,7 +144,10 @@ def _num(v, divisor):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="PageSpeed Insights wrapper")
+    parser = argparse.ArgumentParser(
+        description="PageSpeed Insights wrapper",
+        epilog="Authentication: set PAGESPEED_API_KEY to send a Google API key instead of "
+               "the bearer token.")
     parser.add_argument("--url", required=True, help="Full URL (with scheme)")
     parser.add_argument("--strategy", default="mobile", choices=("mobile", "desktop"))
     parser.add_argument("--categories", default=",".join(DEFAULT_CATEGORIES),

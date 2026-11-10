@@ -1,6 +1,6 @@
 [project]
 name = "google-search-console-agent"
-version = "0.2.2"
+version = "0.3.0"
 description = "Multi-agent toolkit for Google Search Console, Core Web Vitals, and on-page diagnostics. Works with Claude Code, Codex, and Gemini CLI."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,11 +19,18 @@ dependencies = [
 pdf = [
   "weasyprint>=60,<70"
 ]
+mcp = [
+  "mcp>=1.28.1,<2"
+]
 dev = [
   "pytest>=7.4,<10",
   "pytest-cov>=4.1,<8",
-  "ruff>=0.1,<1"
+  "ruff>=0.1,<1",
+  "mcp>=1.28.1,<2"
 ]
+
+[project.scripts]
+gsc-mcp = "gsc_mcp:main"
 
 [tool.setuptools]
 # The adapters are flat modules under scripts/, not a package. Without this
@@ -32,7 +39,7 @@ dev = [
 package-dir = { "" = "scripts" }
 py-modules = [
   "gsc_admin", "gsc_audit", "gsc_auth", "gsc_backlinks", "gsc_benchmarks",
-  "gsc_crux", "gsc_data", "gsc_page_experience", "gsc_psi", "gsc_report",
+  "gsc_crux", "gsc_data", "gsc_mcp", "gsc_page_experience", "gsc_psi", "gsc_report",
   "gsc_structured_data", "gsc_utils",
 ]
 
