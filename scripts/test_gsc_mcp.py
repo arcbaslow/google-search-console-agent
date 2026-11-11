@@ -1774,6 +1774,22 @@ def test_failed_delete_with_a_cache_error_does_not_claim_the_write_succeeded(rec
     assert "succeeded" not in out["cache_warning"]
 
 
+def test_rate_limited_delete_with_a_cache_error_keeps_the_cache_warning(rec, monkeypatch):
+    body = json.dumps({"error": {"code": 429, "errors": [{"reason": "rateLimitExceeded"}]}})
+    entry_server(rec, delete_answer=(429, {"retry-after": "30"}, body.encode()))
+    gate = Gate()
+    token = delete(gate)["confirm"]
+
+    def broken(*key):
+        raise OSError("read-only")
+
+    monkeypatch.setattr(gsc_admin, "cache_delete", broken)
+    out = delete(gate, confirm=token)
+    assert out["error"] == "quota_exceeded" and out["http_status"] == 429
+    assert "stale" in out["cache_warning"] and "succeeded" not in out["cache_warning"]
+    assert deletes(rec) == 1
+
+
 @pytest.mark.parametrize("address,public", [
     ("64:ff9b::a00:5", False), ("64:ff9b::7f00:1", False), ("64:ff9b::5db8:d822", True),
 ])

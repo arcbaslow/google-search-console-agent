@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `delete_sitemap` keeps `cache_warning` on every HTTP failure. A 400, 404 or 429 after the request was sent used to drop it, so a failed cache invalidation went unreported.
+
 ## [0.3.0] - 2026-11-10
 
 - Add an MCP tool set (`gsc-mcp`, `scripts/gsc_mcp.py`, optional `mcp` extra). `register(server, prefix)` adds eight read tools: list sites, Search Analytics with previous-period comparison, URL Inspection, sitemaps, PageSpeed/CrUX, JSON-LD checks, `compare_periods` (two equal-length periods with per-row deltas, final data only) and `crux_history` (CrUX Core Web Vitals history for a URL or origin). They request only the read-only scope, outputs are bounded and scrubbed, and failures come back as structured errors. Structured-data fetches go through an opener that connects only to validated public addresses on every redirect hop and sitemap fetch; the `gsc_structured_data` fetch functions take an optional `opener` argument and behave as before without it. `compare_periods` never joins rows whose keys were redacted as personal data.

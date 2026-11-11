@@ -736,7 +736,8 @@ def _send_delete(site: str, feedpath: str) -> None:
         if exc.resp.status >= 500:
             raise _ToolError("upstream_error", _MAYBE_APPLIED_HINT,
                              http_status=exc.resp.status, **extra) from None
-        raise ApiReadError(details) from None
+        result = _api_error(details)
+        raise _ToolError(result.pop("error"), result.pop("hint"), **result, **extra) from None
     except Exception as exc:
         # Credentials refresh inside execute() before the request is sent.
         if _is_auth_failure(exc):
