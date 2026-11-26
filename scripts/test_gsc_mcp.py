@@ -40,7 +40,11 @@ from google.auth import credentials as google_credentials
 from google.auth.exceptions import DefaultCredentialsError, RefreshError, TransportError
 from googleapiclient.errors import HttpError
 from gsc_utils import ApiReadError
-from mcp.server.fastmcp import FastMCP
+
+try:
+    from mcp.server import MCPServer
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import FastMCP as MCPServer
 
 SITE = "sc-domain:example.com"
 PAGE = "https://example.com/products/widget"
@@ -393,7 +397,17 @@ def run_sweep():
     return {name: [TOOL_FNS[name](**kwargs) for kwargs in calls] for name, calls in SWEEP.items()}
 
 
+def hints(tool):
+    return tool.annotations.model_dump(by_alias=True)
+
+
+def schema(tool):
+    return tool.model_dump(by_alias=True)["inputSchema"]
+
+
 def structured(result):
+    if hasattr(result, "structured_content"):  # mcp 2.x CallToolResult
+        result = result.structured_content or result.content
     if isinstance(result, tuple):
         result = result[1]
     if isinstance(result, dict):
@@ -402,7 +416,7 @@ def structured(result):
 
 
 def build_server(prefix=""):
-    server = FastMCP("test")
+    server = MCPServer("test")
     gsc_mcp.register(server, prefix)
     return server
 
@@ -414,15 +428,15 @@ def test_inventory_lists_exactly_the_read_only_tools():
     assert len(tools) == 8
     for tool in tools:
         assert tool.title
-        assert tool.annotations.readOnlyHint is True
-        assert tool.annotations.destructiveHint is False
-        assert tool.annotations.idempotentHint is True
-        assert tool.annotations.openWorldHint is True
+        assert hints(tool)["readOnlyHint"] is True
+        assert hints(tool)["destructiveHint"] is False
+        assert hints(tool)["idempotentHint"] is True
+        assert hints(tool)["openWorldHint"] is True
         assert tool.description
 
 
 def test_register_applies_prefix_and_returns_the_count():
-    server = FastMCP("test")
+    server = MCPServer("test")
     assert gsc_mcp.register(server, "gsc_") == len(gsc_mcp.TOOLS) == 8
     names = {t.name for t in asyncio.run(server.list_tools())}
     assert names == {"gsc_" + n for n in EXPECTED_TOOLS}
@@ -460,10 +474,10 @@ def test_first_sentence_carries_the_search_keywords(name, keywords):
 
 def test_search_analytics_keeps_the_connector_parameter_names():
     tools = {t.name: t for t in asyncio.run(build_server().list_tools())}
-    props = tools["search_analytics"].inputSchema["properties"]
+    props = schema(tools["search_analytics"])["properties"]
     assert {"site_url", "start_date", "end_date", "dimensions", "limit"} <= set(props)
     for name in ("list_sites", "list_sitemaps", "search_analytics", "structured_data"):
-        assert "limit" in tools[name].inputSchema["properties"]
+        assert "limit" in schema(tools[name])["properties"]
 
 
 def test_tool_runs_through_the_sdk(rec):
@@ -1333,7 +1347,7 @@ def test_credentials_present_makes_no_network_call_and_no_adc_probe(home, monkey
 
 def test_main_builds_the_server_inside_the_call_and_runs_stdio(monkeypatch):
     runs = []
-    monkeypatch.setattr(FastMCP, "run", lambda self, *a, **k: runs.append(self))
+    monkeypatch.setattr(MCPServer, "run", lambda self, *a, **k: runs.append(self))
     gsc_mcp.main()
     (server,) = runs
     assert server.name == "google-search-console-agent"
@@ -1660,27 +1674,27 @@ def test_bad_delete_targets_are_rejected_before_any_request(rec, kwargs):
 
 
 def test_register_writes_adds_the_destructive_tool_without_a_gate_argument():
-    server = FastMCP("test")
+    server = MCPServer("test")
     assert gsc_mcp.register_writes(server, Gate(), "gsc_") == 1
     (tool,) = asyncio.run(server.list_tools())
     assert tool.name == "gsc_delete_sitemap" and tool.title
-    assert tool.annotations.readOnlyHint is False
-    assert tool.annotations.destructiveHint is True
-    assert tool.annotations.idempotentHint is False
-    assert tool.annotations.openWorldHint is True
-    assert set(tool.inputSchema["properties"]) == {"site_url", "sitemap_url", "confirm"}
+    assert hints(tool)["readOnlyHint"] is False
+    assert hints(tool)["destructiveHint"] is True
+    assert hints(tool)["idempotentHint"] is False
+    assert hints(tool)["openWorldHint"] is True
+    assert set(schema(tool)["properties"]) == {"site_url", "sitemap_url", "confirm"}
     assert "webmasters" in tool.description
 
 
 def test_register_writes_needs_a_callable_gate():
     with pytest.raises(TypeError):
-        gsc_mcp.register_writes(FastMCP("test"), None)
+        gsc_mcp.register_writes(MCPServer("test"), None)
 
 
 def test_write_tool_runs_through_the_sdk(rec):
     entry_server(rec)
     gate = Gate()
-    server = FastMCP("test")
+    server = MCPServer("test")
     gsc_mcp.register_writes(server, gate)
     args = {"site_url": SITE, "sitemap_url": SITEMAP_URL}
     dry = structured(asyncio.run(server.call_tool("delete_sitemap", args)))

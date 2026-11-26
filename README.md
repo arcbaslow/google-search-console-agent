@@ -151,10 +151,10 @@ The report defaults to `medium` confidence and drops to `low` when search-data r
 
 ```bash
 python -m pip install -e ".[mcp]"
-gsc-mcp                      # stdio server with the read tools, FastMCP name google-search-console-agent
+gsc-mcp                      # stdio server with the read tools, server name google-search-console-agent
 ```
 
-A host that already runs a FastMCP server can import the module instead. `gsc_mcp.register(server, prefix)` adds the read tools (names are prefixed, for example `gsc_list_sites`) and returns how many it added. `gsc_mcp.register_writes(server, gate, prefix)` adds the write tool; `gate()` is called before every confirmed write and returns `None` to allow it or an error dict that the tool returns as the result, after the same PII scrubbing as every other output. `gsc_mcp.credentials_present()` says whether any credential source exists without a network call. Requires `mcp>=1.28.1,<2`.
+A host that already runs an MCP server (MCPServer on mcp 2.x, FastMCP on 1.x) can import the module instead. `gsc_mcp.register(server, prefix)` adds the read tools (names are prefixed, for example `gsc_list_sites`) and returns how many it added. `gsc_mcp.register_writes(server, gate, prefix)` adds the write tool; `gate()` is called before every confirmed write and returns `None` to allow it or an error dict that the tool returns as the result, after the same PII scrubbing as every other output. `gsc_mcp.credentials_present()` says whether any credential source exists without a network call. Works with `mcp>=1.28.1,<3`.
 
 | Tool | What it does | Scope or key |
 | --- | --- | --- |
