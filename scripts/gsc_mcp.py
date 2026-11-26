@@ -966,9 +966,12 @@ def credentials_present() -> bool:
 
 
 def main() -> None:
-    from mcp.server.fastmcp import FastMCP
+    try:
+        from mcp.server import MCPServer
+    except ImportError:  # mcp 1.x, which google-web-mcp still hosts these tools on
+        from mcp.server.fastmcp import FastMCP as MCPServer
 
-    server = FastMCP("google-search-console-agent")
+    server = MCPServer("google-search-console-agent")
     register(server)
     server.run()
 
